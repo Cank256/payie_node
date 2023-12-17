@@ -135,4 +135,4 @@ dist
 certs/*
 
 # Provider config
-.providers.json
+*providers.json
