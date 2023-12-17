@@ -4,6 +4,7 @@
  * @requires constants
  */
 
+require('dotenv').config()
 const dasherize = require('underscore.string/dasherize')
 const uniqid = require('uniqid')
 import { ERROR_MESSAGES, LOG_LEVELS, STATUS_CODES } from './constants'
@@ -147,6 +148,19 @@ export async function getRequestData(req, res, next) {
     } else {
         next()
     }
+}
+
+
+export async function authenticateRequest(req, res, next) {
+    let gatewayRef = req.gatewayRef;
+    const authorizedIPs = JSON.parse(process.env.APP_AUTHORIZED_IPS || '[]');
+    
+    if (req.get('api-key') !== process.env.APP_API_KEY || !authorizedIPs.includes(req.ip)) {
+        let response = createResponse(STATUS_CODES.BAD_REQUEST, {transaction_id: gatewayRef}, ERROR_MESSAGES.UNAUTHORIZED_ACCESS);
+        await insertTransactionLog(req, LOG_LEVELS.CRITICAL, ERROR_MESSAGES.UNAUTHORIZED_ACCESS, response);
+        return res.status(response.code).json(response);
+    }
+    next();
 }
 
 export async function validateRequest(req, res, next) {

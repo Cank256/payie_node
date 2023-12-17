@@ -11,6 +11,7 @@ const redisClient = require('../config/redis')
 
 import { LOG_LEVELS, STATUS_CODES } from '../utilities/constants'
 import {
+    authenticateRequest,
     createResponse,
     getRequestDetails,
     getServiceProviders,
@@ -51,7 +52,7 @@ router.get('/', (req: any, res, next) => {
  * @returns {Object} - JSON response containing the API state.
  * @throws {Error} - Throws an error if there's an issue with Redis operations.
  */
-router.get('/providers', async (req, res, next) => {
+router.get('/providers', authenticateRequest, async (req, res, next) => {
     try {
         let data = getServiceProviders()
         const response = createResponse(STATUS_CODES.OK, data, '')
