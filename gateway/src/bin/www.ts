@@ -2,6 +2,8 @@ require('dotenv').config();
 const app = require('../app');
 const debug = require('debug')('proxy:server');
 import * as fs from 'fs';
+const db = require('../config/db');
+const { MongoClient } = require('mongodb');
 
 const https = require('https');
 
@@ -10,20 +12,31 @@ const options = {
     cert: fs.readFileSync(__dirname + '/../../certs/cert.crt'),
 };
 
-const port = normalizePort(process.env.APP_PORT);
-app.set('port', port);
+const appPort = normalizePort(process.env.APP_PORT);
+const dbPort = normalizePort(process.env.DB_PORT);
+
+app.set('port', appPort);
 
 const server = https.createServer(options, app);
 
-server.listen(port, () => {
-    console.log(`App running on port ${port}`);
+db.connect(process.env.DB_LINK, (err) => {
+    if (err) {
+        console.error(`Unable to connect to MongoDB at ${process.env.DB_LINK}`);
+        console.error(err.message);
+        process.exit(1);
+    } else {
+        server.listen(appPort, () => {
+            console.log(`MongoDB running on port ${dbPort}`);
+            console.log(`App running on port ${appPort}`);
+        });
+    }
 });
 
 server.on('error', onError);
 server.on('listening', onListening);
 
-function normalizePort(val) {
-    const port = parseInt(val, 10);
+function normalizePort(val: string | number | boolean) {
+    const port = parseInt(val as string, 10);
 
     if (isNaN(port)) {
         return val;
@@ -36,12 +49,12 @@ function normalizePort(val) {
     return false;
 }
 
-function onError(error) {
+function onError(error: NodeJS.ErrnoException) {
     if (error.syscall !== 'listen') {
         throw error;
     }
 
-    const bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port;
+    const bind = typeof appPort === 'string' ? 'Pipe ' + appPort : 'Port ' + appPort;
 
     // handle specific listen errors with friendly messages
     switch (error.code) {
@@ -60,6 +73,6 @@ function onError(error) {
 
 function onListening() {
     const addr = server.address();
-    const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
+    const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr?.port;
     debug('Listening on ' + bind);
 }

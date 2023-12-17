@@ -3,7 +3,7 @@ const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
 const bodyParser = require('body-parser')
 const timeout = require('express-timeout-handler')
-let router = require('./router')
+let router = require('./config/router')
 let app = express()
 
 app.enable('trust proxy')
