@@ -1,0 +1,9 @@
+{
+  "name": "payie_gateway",
+  "version": "1.0.0",
+  "description": "Payie Payment Project Gateway using NodeJS.",
+  "main": "./dist/bin/www.js",
+  "repository": "https://github.com/Cank256/payie_node",
+  "author": "Caleb Nkunze",
+  "license": "MIT"
+}
