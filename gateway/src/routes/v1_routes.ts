@@ -54,38 +54,38 @@ router.get('/', (req: any, res, next) => {
  */
 router.get('/providers', authenticateRequest, async (req, res, next) => {
     try {
-        let data = getServiceProviders()
-        const response = createResponse(STATUS_CODES.OK, data, '')
+        let response = getServiceProviders();
 
         // Attempt to retrieve cached data from Redis
-        const getCached = await redisClient.get(CACHE_KEY + 'providers')
+        const getCached = await redisClient.get(CACHE_KEY + 'providers');
 
-        // Check if cached data exists
-        if (getCached.status === true) {
-            return res.status(STATUS_CODES.OK).json(JSON.parse(getCached.data))
-        } else {
-            // Set the API state in the cache if not found
+        // Check if cached data exists and is different from the response
+        if (getCached.status === true && JSON.parse(getCached.data) !== response) {
+            // Update the cached data with the new response
             const setCached = await redisClient.set(
                 CACHE_KEY + 'providers',
                 JSON.stringify(response),
                 CACHE_TTL,
-            )
+            );
 
             // Check if caching is successful
             if (setCached.status) {
-                return res.status(STATUS_CODES.OK).json(response)
+                return res.status(STATUS_CODES.OK).json(response);
             }
         }
+
+        // Return the cached data or the response if caching fails
+        return res.status(STATUS_CODES.OK).json(JSON.parse(getCached.data));
     } catch (err) {
         // Handle Redis errors
-        console.error(err)
+        console.error(err);
         let theError = createResponse(
             STATUS_CODES.INTERNAL_SERVER_ERROR,
             {},
             'Internal Server Error',
-        )
-        return res.status(STATUS_CODES.OK).json(theError)
+        );
+        return res.status(STATUS_CODES.OK).json(theError);
     }
-})
+});
 
 module.exports = router
