@@ -1,9 +1,20 @@
 {
   "name": "payie_gateway",
   "version": "1.0.0",
-  "description": "Payie Payment Project Gateway using NodeJS.",
+  "description": "Payie Payment Project Gateway using Node.js.",
   "main": "./dist/bin/www.js",
-  "repository": "https://github.com/Cank256/payie_node",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cank256/payie_node"
+  },
   "author": "Caleb Nkunze",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "format": "prettier --write 'src/**/*.ts' --config .prettierrc"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "prettier": "^3.1.1"
+  }
 }
