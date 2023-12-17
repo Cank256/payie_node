@@ -17,7 +17,7 @@ let timeoutOptions = {
     timeout: 480000, // ms == 8 minutes
 
     onTimeout: function (req, res) {
-        res.status(408)
+        res.status(504)
     },
 }
 app.use(timeout.handler(timeoutOptions))
