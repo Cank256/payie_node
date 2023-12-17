@@ -46,6 +46,7 @@ const normalizePort = (val: string | number | boolean) => {
  * Set the port for the Express application.
  */
 const appPort = normalizePort(process.env.APP_PORT)
+const dbPort = normalizePort(process.env.DB_PORT)
 app.set('port', appPort)
 
 /**
@@ -64,7 +65,7 @@ db.connect(process.env.DB_LINK, (err) => {
         process.exit(1)
     } else {
         server.listen(appPort, () => {
-            console.log(`MongoDB running on port ${appPort}`)
+            console.log(`MongoDB running on port ${dbPort}`)
             console.log(`App running on port ${appPort}`)
         })
     }

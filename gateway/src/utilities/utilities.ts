@@ -4,8 +4,9 @@
  * @requires constants
  */
 
-import { STATUS_CODES } from "./constants";
+import { ERROR_MESSAGES, STATUS_CODES } from "./constants";
 let config = require('../config/providers');
+const dasherize = require("underscore.string/dasherize");
 
 /**
  * Interface representing a standardized API response.
@@ -23,6 +24,31 @@ export interface IResponse {
     data?: any
 }
 
+/**
+ * Interface representing configuration details for service providers.
+ * @interface
+ * @name IConfig
+ * @property {string} [name] - Name of the service provider.
+ * @property {string[]} [type] - Type of the service provider.
+ * @property {string} [code] - Code associated with the service provider.
+ * @property {string} [server_url] - URL of the server for the service provider.
+ * @property {string} [secret_key] - Secret key for authentication with the service provider.
+ * @property {string} [request_payment_url] - URL for requesting payments from the service provider.
+ * @property {string} [payout_url] - URL for processing payouts with the service provider.
+ * @property {string} [auth_url] - URL for authentication with the service provider.
+ * @property {string} [validate_url] - URL for validating requests with the service provider.
+ * @property {string} [send_sms_url] - URL for sending SMS messages with the service provider.
+ * @property {string} [balance_url] - URL for checking account balance with the service provider.
+ * @property {string} [secret] - Secret key for authentication (alternative).
+ * @property {string} [msisdn] - Mobile Subscriber Integrated Services Digital Network (MSISDN) for the service provider.
+ * @property {string} [client_id] - Client ID for authentication with the service provider.
+ * @property {string} [api_key] - API key for authentication with the service provider.
+ * @property {string} [api_user] - API user for authentication with the service provider.
+ * @property {string[]} [allowed_callback_ips] - List of allowed callback IP addresses for the service provider.
+ * @property {string} [collection_subscription_key] - Subscription key for collection events.
+ * @property {string} [payout_subscription_key] - Subscription key for payout events.
+ * @property {string} [provider_callback_url] - Callback URL for the service provider.
+ */
 export interface IConfig {
     name?: string,
     type?: string[],
@@ -94,6 +120,58 @@ export function getStatusCodeMessage(code: number, extraInfo: string): string {
     }
 }
 
+/**
+ * Middleware to validate the content type of incoming requests.
+ * @function
+ * @name getRequestData
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {function} next - The next middleware function.
+ * @returns {Object} - JSON response object indicating success or failure.
+ * @memberof module:utils/response
+ */
+export async function getRequestData(req, res, next) {
+    if (!req.is('*/json')) {
+        let response = createResponse(STATUS_CODES.BAD_REQUEST, {}, "Unrecognized Request Content Type");
+        return res.status(response.code).json(response);
+    }
+    else {
+        next();
+    }
+}
+
+export async function validateRequest(req, res, next) {
+
+    //validate service provider
+    if (!req.get('service')) {
+        let response = createResponse(STATUS_CODES.BAD_REQUEST,
+            {},
+            ERROR_MESSAGES.MISSING_PROVIDER_HEADER
+        );
+        return res.status(response.code).json(response);
+    }
+
+    if (!config.get(`service_providers:${req.get('service')}`)) {
+        let response = createResponse(STATUS_CODES.BAD_REQUEST,
+            {},
+            ERROR_MESSAGES.UNKNOWN_SERVICE_PROVIDER
+        );
+        return res.status(response.code).json(response);
+    }
+    //Add service provider to request
+    req.serviceProvider = await getServiceProvider(req.get('service'));
+
+    //call next middleware
+    next();
+}
+
+/**
+ * Retrieves a list of configured service providers.
+ * @function
+ * @name getServiceProviders
+ * @returns {IResponse} - Standardized API response object containing the list of service providers.
+ * @memberof module:utils/response
+ */
 export function getServiceProviders(): IResponse {
     let providers = [];
     let providersList = config.get('service_providers');
@@ -110,6 +188,12 @@ export function getServiceProviders(): IResponse {
     }
 
     return createResponse(STATUS_CODES.OK, providers);
+}
+
+export async function getServiceProvider(code: string): Promise<any> {
+    let providerConfig = config.get(`service_providers:${code}`);
+    let serviceProvider = await import(`./services/${dasherize(code)}`);
+    return new serviceProvider.default(providerConfig);
 }
 
 export function getRequestDetails(req, res, next) {
