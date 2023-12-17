@@ -10,11 +10,36 @@
   "author": "Caleb Nkunze",
   "license": "MIT",
   "scripts": {
-    "format": "prettier --write 'src/**/*.ts' --config .prettierrc"
+    "format": "prettier --write 'src/**/*.ts' --config .prettierrc",
+    "build": "tsc --build",
+    "dev": "tsc --build && nodemon ./dist/bin/www.js",
+    "start": "pm2 start ./dist/bin/www.js --name payie_gateway",
+    "stop": "pm2 stop payie_gateway",
+    "restart": "pm2 restart payie_gateway"
   },
   "devDependencies": {
+    "@types/body-parser": "^1.19.5",
+    "@types/cookie-parser": "^1.4.6",
+    "@types/errorhandler": "^1.5.3",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20.10.4",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
-    "prettier": "^3.1.1"
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-timeout-handler": "^2.2.2",
+    "fs": "^0.0.1-security",
+    "morgan": "^1.10.0",
+    "nconf": "^0.12.1",
+    "path": "^0.12.7",
+    "pm2": "^5.3.0",
+    "uniqid": "^5.4.0"
   }
 }

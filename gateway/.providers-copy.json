@@ -1,0 +1,35 @@
+{
+  "service_providers": {
+    "mtn-momo": {
+      "server_url": "https://sandbox.momodeveloper.mtn.com/",
+      "type": "Payment Provider",
+      "name": "MTN Mobile Money",
+      "code": "mtn-momo",
+      "provider_env": "sandbox",
+      "api_user": "",
+      "api_key": "",
+      "collection_subscription_key": "",
+      "payout_subscription_key": "",
+      "provider_callback_url": "",
+      "parameters": ["currency", "amount", "msisdn", "async", "callback_url", "description", "type"],
+      "just": ""
+    },
+    "card": {
+      "server_url": "https://api.flutterwave.com/v3/payments",
+      "type": "Payment Provider",
+      "name": "Card Payments (VISA/MasterCard)",
+      "code": "card",
+      "secret_key": ""
+    },
+    "sms": {
+      "auth_url": "https://auth.sms.to/oauth/token",
+      "balance_url": "https://auth.sms.to/api/balance",
+      "validate_url": "https://sms.to/v1/verify/number",
+      "type": "Vendor",
+      "name": "SMS",
+      "code": "sms",
+      "client_id": "",
+      "secret": "" 
+    }
+  }
+}

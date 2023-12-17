@@ -1,4 +1,21 @@
 {
+  "app": {
+    "api_key": "sJ32g5pxS06nXSJr2TjjTRMSr85Txqv52B72q3F5ZK41N3ZdGc2Qb15j2FJZjf4MV65XFP519KLd42q4749F8kG09mG3wmmZ08vR78F443s7cJbZ3MmKMtC69KN0RqS2",
+    "authorized_ips": ["::ffff:127.0.0.1", "::1"],
+    "port": 8080
+  },
+  "db": {
+    "link": "mongodb://localhost:27017/gateway",
+    "collections": {
+      "transactions": "transactions",
+      "momo_ips": "momo_ipns",
+      "card_ips": "card_ipns"
+    }
+  },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6379
+  },
   "service_providers": {
     "mtn-momo": {
       "server_url": "https://sandbox.momodeveloper.mtn.com/",
@@ -6,20 +23,20 @@
       "name": "MTN Mobile Money",
       "code": "mtn-momo",
       "provider_env": "sandbox",
-      "api_user": "",
-      "api_key": "",
-      "collection_subscription_key": "",
-      "payout_subscription_key": "",
-      "provider_callback_url": "",
+      "api_user": "057e5a0f-a3aa-4005-9a7d-1a5e81622ef3",
+      "api_key": "beaadc2b24b34ac4b45cf19b20ed589e",
+      "collection_subscription_key": "7ea8ea97e8d6450fb340a269d78db359",
+      "payout_subscription_key": "4abbb2f385154d7893f96f096ea124bc",
+      "provider_callback_url": "http://gateway.cankpay.com/api/provider-callback/mtn-mobile-money",
       "parameters": ["currency", "amount", "msisdn", "async", "callback_url", "description", "type"],
-      "just": ""
+      "just": "MDU3ZTVhMGYtYTNhYS00MDA1LTlhN2QtMWE1ZTgxNjIyZWYzOmJlYWFkYzJiMjRiMzRhYzRiNDVjZjE5YjIwZWQ1ODll"
     },
     "card": {
       "server_url": "https://api.flutterwave.com/v3/payments",
       "type": "Payment Provider",
       "name": "Card Payments (VISA/MasterCard)",
       "code": "card",
-      "secret_key": ""
+      "secret_key": "FLWSECK_TEST-e56726e9511a428b6bb8247b8dc07bde-X"
     },
     "sms": {
       "auth_url": "https://auth.sms.to/oauth/token",
@@ -28,8 +45,8 @@
       "type": "Vendor",
       "name": "SMS",
       "code": "sms",
-      "client_id": "",
-      "secret": "" 
+      "client_id": "YCmEstHEjmSB7gEy",
+      "secret": "9ZPe1aiixZ6xn0qINVhh81LtTG2vCrVq" 
     }
   }
 }

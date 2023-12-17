@@ -132,8 +132,7 @@ dist
 .DS_Store
 
 # SSL Certificates
-certs/
+certs/*
 
 # Provider config
-.providers_dev.json
-.providers_prod.json
+.providers.json
