@@ -4,9 +4,11 @@
  * @requires constants
  */
 
+const dasherize = require("underscore.string/dasherize");
+const uniqid = require('uniqid');
 import { ERROR_MESSAGES, STATUS_CODES } from "./constants";
 let config = require('../config/providers');
-const dasherize = require("underscore.string/dasherize");
+const db = require("../config/db");
 
 /**
  * Interface representing a standardized API response.
@@ -194,6 +196,16 @@ export async function getServiceProvider(code: string): Promise<any> {
     let providerConfig = config.get(`service_providers:${code}`);
     let serviceProvider = await import(`./services/${dasherize(code)}`);
     return new serviceProvider.default(providerConfig);
+}
+
+/*use this to generate transaction IDs*/
+export function generateCode(): string {
+    let code = new Date().getTime() + Math.floor(Math.random() * 100000000);
+    return code.toString();
+}
+
+export function generateUniqueId(): string {
+    return uniqid('cankpay-');
 }
 
 export function getRequestDetails(req, res, next) {
