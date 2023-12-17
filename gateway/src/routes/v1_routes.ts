@@ -10,7 +10,7 @@ let router = express.Router()
 const redisClient = require('../config/redis')
 
 import {STATUS_CODES} from "../utilities/constants";
-import { createResponse } from '../utilities/utilities';
+import { createResponse, getServiceProviders } from '../utilities/utilities';
 
 /**
  * Redis Cache key prefix for API routes.
@@ -24,16 +24,16 @@ const CACHE_KEY = 'payie_gateway_v1-'
  */
 const CACHE_TTL = 60 * 60
 
-// router.get('/', (req: any, res, next) => {
-//     res.json({code: STATUS_CODES.OK, success: true, message: 'CankPay Gateway v1'});
-// });
+router.get('/', (req: any, res, next) => {
+    res.json({code: STATUS_CODES.OK, success: true, message: 'CankPay Gateway v1'});
+});
 
 /**
- * Route handler for the state endpoint.
+ * Route handler for the providers endpoint.
  * Retrieves and caches the API state.
  *
  * @function
- * @name GET/
+ * @name GET/providers
  * @memberof module:routes/v1_routes
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
@@ -41,16 +41,13 @@ const CACHE_TTL = 60 * 60
  * @returns {Object} - JSON response containing the API state.
  * @throws {Error} - Throws an error if there's an issue with Redis operations.
  */
-router.get('/', async (req, res, next) => {
+router.get('/providers', async (req, res, next) => {
     try {
-        const response = {
-            code: STATUS_CODES.OK,
-            success: true,
-            message: 'CankPay Gateway v1',
-        }
+        let data = getServiceProviders();
+        const response = createResponse(STATUS_CODES.OK, data, '')
 
         // Attempt to retrieve cached data from Redis
-        const getCached = await redisClient.get(CACHE_KEY + 'route')
+        const getCached = await redisClient.get(CACHE_KEY + 'providers')
 
         // Check if cached data exists
         if (getCached.status === true) {
@@ -58,7 +55,7 @@ router.get('/', async (req, res, next) => {
         } else {
             // Set the API state in the cache if not found
             const setCached = await redisClient.set(
-                CACHE_KEY + 'route',
+                CACHE_KEY + 'providers',
                 JSON.stringify(response),
                 CACHE_TTL,
             )

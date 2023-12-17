@@ -5,6 +5,7 @@
  */
 
 import { STATUS_CODES } from "./constants";
+let config = require('../config/providers');
 
 /**
  * Interface representing a standardized API response.
@@ -68,4 +69,22 @@ export function getStatusCodeMessage(code: number, extraInfo: string): string {
         default:
             return `Unknown status code: ${code}. ${extraInfo}`.trim();
     }
+}
+
+export function getServiceProviders(): IResponse {
+    let providers = [];
+    let providersList = config.get('service_providers');
+
+    for (let key in providersList) {
+        if (providersList.hasOwnProperty(key) && providersList[key]["name"]) {
+            providers.push({
+                name: providersList[key]["name"],
+                code: providersList[key]["code"],
+                type: providersList[key]["type"]
+            });
+        }
+
+    }
+
+    return createResponse(STATUS_CODES.OK, providers);
 }
