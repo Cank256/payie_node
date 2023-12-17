@@ -9,8 +9,14 @@ import express = require('express')
 let router = express.Router()
 const redisClient = require('../config/redis')
 
-import {STATUS_CODES} from "../utilities/constants";
-import { createResponse, getServiceProviders } from '../utilities/utilities';
+import { LOG_LEVELS, STATUS_CODES } from '../utilities/constants'
+import {
+    createResponse,
+    getRequestDetails,
+    getServiceProviders,
+    insertTransactionLog,
+    validateRequest,
+} from '../utilities/utilities'
 
 /**
  * Redis Cache key prefix for API routes.
@@ -25,8 +31,12 @@ const CACHE_KEY = 'payie_gateway_v1-'
 const CACHE_TTL = 60 * 60
 
 router.get('/', (req: any, res, next) => {
-    res.json({code: STATUS_CODES.OK, success: true, message: 'CankPay Gateway v1'});
-});
+    res.json({
+        code: STATUS_CODES.OK,
+        success: true,
+        message: 'CankPay Gateway v1',
+    })
+})
 
 /**
  * Route handler for the providers endpoint.
@@ -43,7 +53,7 @@ router.get('/', (req: any, res, next) => {
  */
 router.get('/providers', async (req, res, next) => {
     try {
-        let data = getServiceProviders();
+        let data = getServiceProviders()
         const response = createResponse(STATUS_CODES.OK, data, '')
 
         // Attempt to retrieve cached data from Redis
@@ -68,7 +78,11 @@ router.get('/providers', async (req, res, next) => {
     } catch (err) {
         // Handle Redis errors
         console.error(err)
-        let theError = createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}, 'Internal Server Error')
+        let theError = createResponse(
+            STATUS_CODES.INTERNAL_SERVER_ERROR,
+            {},
+            'Internal Server Error',
+        )
         return res.status(STATUS_CODES.OK).json(theError)
     }
 })

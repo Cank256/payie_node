@@ -115,9 +115,12 @@ app.use((req, res, next) => {
  */
 app.use((err, req, res, next) => {
     if (err.status === 404) {
-        let response = createResponse(STATUS_CODES.NOT_FOUND, {}, 'Route Not Found.')
+        let response = createResponse(
+            STATUS_CODES.NOT_FOUND,
+            {},
+            'Route Not Found.',
+        )
         res.status(STATUS_CODES.NOT_FOUND).json(response)
-        
     } else {
         // Set locals, only providing error in development
         res.locals.message = err.message

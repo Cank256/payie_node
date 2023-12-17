@@ -5,8 +5,8 @@
  */
 
 const Redis = require('redis')
-import {STATUS_CODES} from "../utilities/constants";
-import { createResponse } from "../utilities/utilities";
+import { STATUS_CODES } from '../utilities/constants'
+import { createResponse } from '../utilities/utilities'
 
 /**
  * Redis client configuration.
@@ -49,7 +49,11 @@ const get = async (key) => {
         }
     } catch (err) {
         console.error(err)
-        return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}, 'Internal Server Error')
+        return createResponse(
+            STATUS_CODES.INTERNAL_SERVER_ERROR,
+            {},
+            'Internal Server Error',
+        )
     }
 }
 
@@ -72,7 +76,11 @@ const set = async (key, data, ttl) => {
         return { status: true }
     } catch (err) {
         console.error(err)
-        return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}, 'Internal Server Error')
+        return createResponse(
+            STATUS_CODES.INTERNAL_SERVER_ERROR,
+            {},
+            'Internal Server Error',
+        )
     }
 }
 

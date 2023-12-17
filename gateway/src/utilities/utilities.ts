@@ -4,11 +4,11 @@
  * @requires constants
  */
 
-const dasherize = require("underscore.string/dasherize");
-const uniqid = require('uniqid');
-import { ERROR_MESSAGES, STATUS_CODES } from "./constants";
-let config = require('../config/providers');
-const db = require("../config/db");
+const dasherize = require('underscore.string/dasherize')
+const uniqid = require('uniqid')
+import { ERROR_MESSAGES, LOG_LEVELS, STATUS_CODES } from './constants'
+let config = require('../config/providers')
+const db = require('../config/db')
 
 /**
  * Interface representing a standardized API response.
@@ -20,9 +20,9 @@ const db = require("../config/db");
  * @property {any} [data] - Optional data payload included in the response.
  */
 export interface IResponse {
-    success: boolean,
-    code: number,
-    message: string,
+    success: boolean
+    code: number
+    message: string
     data?: any
 }
 
@@ -52,25 +52,25 @@ export interface IResponse {
  * @property {string} [provider_callback_url] - Callback URL for the service provider.
  */
 export interface IConfig {
-    name?: string,
-    type?: string[],
-    code?: string,
-    server_url?: string,
-    secret_key?: string,
-    request_payment_url?: string,
-    payout_url?: string,
-    auth_url?: string,
-    validate_url?: string,
-    send_sms_url?: string,
-    balance_url?: string,
-    secret?: string,
-    msisdn?: string,
-    client_id?: string,
-    api_key?: string,
-    api_user?: string,
-    allowed_callback_ips?: string[],
-    collection_subscription_key?: string,
-    payout_subscription_key?: string,
+    name?: string
+    type?: string[]
+    code?: string
+    server_url?: string
+    secret_key?: string
+    request_payment_url?: string
+    payout_url?: string
+    auth_url?: string
+    validate_url?: string
+    send_sms_url?: string
+    balance_url?: string
+    secret?: string
+    msisdn?: string
+    client_id?: string
+    api_key?: string
+    api_user?: string
+    allowed_callback_ips?: string[]
+    collection_subscription_key?: string
+    payout_subscription_key?: string
     provider_callback_url?: string
 }
 
@@ -84,13 +84,17 @@ export interface IConfig {
  * @returns {IResponse} - Standardized API response object.
  * @memberof module:utils/response
  */
-export function createResponse(code: number, data?: any, extraInfo: string = ""): IResponse {
+export function createResponse(
+    code: number,
+    data?: any,
+    extraInfo: string = '',
+): IResponse {
     return {
         code,
         success: code < 300 ? true : false,
         message: getStatusCodeMessage(code, extraInfo),
-        data
-    };
+        data,
+    }
 }
 
 /**
@@ -105,20 +109,20 @@ export function createResponse(code: number, data?: any, extraInfo: string = "")
 export function getStatusCodeMessage(code: number, extraInfo: string): string {
     switch (code) {
         case STATUS_CODES.OK:
-            return `Request completed successfully. ${extraInfo}`.trim();
+            return `Request completed successfully. ${extraInfo}`.trim()
         case STATUS_CODES.SERVICE_UNAVAILABLE:
-            return `Service is unavailable. ${extraInfo}`.trim();
+            return `Service is unavailable. ${extraInfo}`.trim()
         case STATUS_CODES.BAD_REQUEST:
-            return `Invalid request. ${extraInfo}`.trim();
+            return `Invalid request. ${extraInfo}`.trim()
         case STATUS_CODES.HTTP_GATEWAY_TIMEOUT:
         case STATUS_CODES.INTERNAL_SERVER_ERROR:
-            return `Encountered an unexpected condition. ${extraInfo}`.trim();
+            return `Encountered an unexpected condition. ${extraInfo}`.trim()
         case STATUS_CODES.UNPROCESSABLE_ENTITY:
-            return `Request Failed. ${extraInfo}`.trim();
+            return `Request Failed. ${extraInfo}`.trim()
         case STATUS_CODES.NOT_FOUND:
-            return `Request Failed. ${extraInfo}`.trim();
+            return `Request Failed. ${extraInfo}`.trim()
         default:
-            return `Unknown status code: ${code}. ${extraInfo}`.trim();
+            return `Unknown status code: ${code}. ${extraInfo}`.trim()
     }
 }
 
@@ -134,37 +138,97 @@ export function getStatusCodeMessage(code: number, extraInfo: string): string {
  */
 export async function getRequestData(req, res, next) {
     if (!req.is('*/json')) {
-        let response = createResponse(STATUS_CODES.BAD_REQUEST, {}, "Unrecognized Request Content Type");
-        return res.status(response.code).json(response);
-    }
-    else {
-        next();
+        let response = createResponse(
+            STATUS_CODES.BAD_REQUEST,
+            {},
+            'Unrecognized Request Content Type',
+        )
+        return res.status(response.code).json(response)
+    } else {
+        next()
     }
 }
 
 export async function validateRequest(req, res, next) {
+    let gatewayRef = req.gatewayRef
+    //validate external transaction id
+    let pyRef = req.body.py_ref || req.query.py_ref
+    if (!pyRef) {
+        let response = createResponse(
+            STATUS_CODES.BAD_REQUEST,
+            {
+                gateway_ref: gatewayRef,
+            },
+            ERROR_MESSAGES.MISSING_TRANSACTION_ID,
+        )
+        await insertTransactionLog(
+            req,
+            LOG_LEVELS.INFO,
+            ERROR_MESSAGES.MISSING_TRANSACTION_ID,
+            response,
+        )
+        return res.status(response.code).json(response)
+    }
+
+    if (await transactionExists(pyRef)) {
+        let response = createResponse(
+            STATUS_CODES.BAD_REQUEST,
+            {
+                gateway_ref: gatewayRef,
+                py_ref: pyRef,
+            },
+            ERROR_MESSAGES.NON_UNIQUE_TRANSACTION,
+        )
+        await insertTransactionLog(
+            req,
+            LOG_LEVELS.INFO,
+            ERROR_MESSAGES.NON_UNIQUE_TRANSACTION,
+            response,
+        )
+        return res.status(response.code).json(response)
+    }
 
     //validate service provider
-    if (!req.get('service')) {
-        let response = createResponse(STATUS_CODES.BAD_REQUEST,
-            {},
-            ERROR_MESSAGES.MISSING_PROVIDER_HEADER
-        );
-        return res.status(response.code).json(response);
+    if (!req.get('service-provider')) {
+        let response = createResponse(
+            STATUS_CODES.BAD_REQUEST,
+            {
+                gateway_ref: gatewayRef,
+                py_ref: pyRef,
+            },
+            ERROR_MESSAGES.MISSING_PROVIDER_HEADER,
+        )
+        await insertTransactionLog(
+            req,
+            LOG_LEVELS.INFO,
+            ERROR_MESSAGES.MISSING_PROVIDER_HEADER,
+            response,
+        )
+        return res.status(response.code).json(response)
     }
 
-    if (!config.get(`service_providers:${req.get('service')}`)) {
-        let response = createResponse(STATUS_CODES.BAD_REQUEST,
-            {},
-            ERROR_MESSAGES.UNKNOWN_SERVICE_PROVIDER
-        );
-        return res.status(response.code).json(response);
+    if (!config.get(`service_providers:${req.get('service-provider')}`)) {
+        let response = createResponse(
+            STATUS_CODES.BAD_REQUEST,
+            {
+                gateway_ref: gatewayRef,
+                py_ref: pyRef,
+            },
+            ERROR_MESSAGES.UNKNOWN_SERVICE_PROVIDER,
+        )
+        await insertTransactionLog(
+            req,
+            LOG_LEVELS.INFO,
+            ERROR_MESSAGES.UNKNOWN_SERVICE_PROVIDER,
+            response,
+        )
+        return res.status(response.code).json(response)
     }
     //Add service provider to request
-    req.serviceProvider = await getServiceProvider(req.get('service'));
+    req.serviceProvider = await getServiceProvider(req.get('service-provider'))
 
     //call next middleware
-    next();
+    next()
 }
 
 /**
@@ -175,100 +239,170 @@ export async function validateRequest(req, res, next) {
  * @memberof module:utils/response
  */
 export function getServiceProviders(): IResponse {
-    let providers = [];
-    let providersList = config.get('service_providers');
+    let providers = []
+    let providersList = config.get('service_providers')
 
     for (let key in providersList) {
-        if (providersList.hasOwnProperty(key) && providersList[key]["name"]) {
+        if (providersList.hasOwnProperty(key) && providersList[key]['name']) {
             providers.push({
-                name: providersList[key]["name"],
-                code: providersList[key]["code"],
-                type: providersList[key]["type"]
-            });
+                name: providersList[key]['name'],
+                code: providersList[key]['code'],
+                type: providersList[key]['type'],
+            })
         }
-
     }
 
-    return createResponse(STATUS_CODES.OK, providers);
+    return createResponse(STATUS_CODES.OK, providers)
 }
 
 export async function getServiceProvider(code: string): Promise<any> {
-    let providerConfig = config.get(`service_providers:${code}`);
-    let serviceProvider = await import(`./services/${dasherize(code)}`);
-    return new serviceProvider.default(providerConfig);
+    let providerConfig = config.get(`service_providers:${code}`)
+    let serviceProvider = await import(`./services/${dasherize(code)}`)
+    return new serviceProvider.default(providerConfig)
 }
 
 /*use this to generate transaction IDs*/
 export function generateCode(): string {
-    let code = new Date().getTime() + Math.floor(Math.random() * 100000000);
-    return code.toString();
+    let code = new Date().getTime() + Math.floor(Math.random() * 100000000)
+    return code.toString()
 }
 
 export function generateUniqueId(): string {
-    return uniqid('cankpay-');
+    return uniqid('cankpay-')
+}
+
+export async function insertTransactionLog(
+    req: any,
+    level: string,
+    message?: string,
+    response?: IResponse,
+) {
+    let gatewayRef = req.gatewayRef
+    let serviceProvider = req.get('service')
+    let requestBody = req.body
+    let url = req.originalUrl
+    let ipAddress = req.ip
+
+    try {
+        let collection = db
+            .get()
+            .collection(config.get('db:collections:transactions'))
+        return await collection.insertOne({
+            ipAddress,
+            gatewayRef,
+            serviceProvider,
+            requestBody,
+            url,
+            level,
+            message,
+            responseBody: response,
+            createtime: new Date(),
+        })
+    } catch (err) {
+        console.log(err.message)
+    }
+}
+
+export async function transactionExists(pyRef: string) {
+    let count = await db
+        .get()
+        .collection(config.get('db:collections:transactions'))
+        .count({ 'requestBody.py_ref': pyRef })
+    return count > 0
+}
+
+
+export async function updateTransactionLog(req: any, response: IResponse) {
+    let gatewayRef = req.gatewayRef;
+    try {
+        let collection = db.get().collection(config.get('db:collections:transactions'));
+        return await collection.updateOne({gatewayRef: gatewayRef}, {
+            $set: {
+                responseBody: response,
+                updatedAt: new Date()
+            }
+        });
+    } catch (err) {
+        console.log(err.message);
+    }
+}
+
+export async function updateLogByExternalRef(pyRef: string, response: IResponse) {
+    /*this function updates the transaction log where the pyRef is the given value*/
+    try {
+        let collection = db.get().collection(config.get('db:collections:transactions'));
+        return await collection.updateOne({"requestBody.py_ref": pyRef}, {
+            $set: {
+                responseBody: response,
+                updatedAt: new Date()
+            }
+        });
+    } catch (err) {
+        console.log(err.message);
+    }
 }
 
 export function getRequestDetails(req, res, next) {
-    let details = {};
-    let externalTransactionId = req.body.external_transaction_id || req.query.external_transaction_id;
-    let data = req.body.data;
-    let amount = req.body.amount;
-    let msisdn = req.body.msisdn;
+    let details = {}
+    let pyRef = req.body.py_ref || req.query.py_ref
+    let data = req.body.data
+    let amount = req.body.amount
+    let msisdn = req.body.msisdn
 
     /*some of the parameters used by PayWay*/
-    let provider = req.body.provider;
-    let contactPhone = req.body.contact_phone;
-    let code = req.body.product_code || req.query.product_code;
-    let bundleType = req.body.bundle_type;
-    let secondaryCode = req.body.secondary_product_code;
-    let ip12 = req.body.ip12;
-    let period = req.body.period;
-    let areaId = req.body.area_id;
-    let scenarioId = req.body.scenario_id;
-    let itemsId = req.body.items_id;
-    let quantity = req.body.quantity;
-    let marketsId = req.body.markets_id;
-    let prn = req.body.prn;
-    let branchId = req.body.branch_id;
-    let penaltyType = req.body.penalty_type;
-    let penaltyId = req.body.penalty_id;
-    let payerName = req.body.payer_name;
-    let uraRef = req.body.ura_ref;
-    let uraPlate = req.body.ura_plate;
-    let uraPermit = req.body.ura_permit;
-    let memo = req.body.memo;
-    let listId = req.body.list_id || req.query.list_id;
-    let currency = req.body.currency;
-    let version = req.body.version;
-    let visaDetails = req.body.visa_details;
-    let smsFrom = req.body.sms_from;
-    let smsTo = req.body.sms_to;
-    let smsText = req.body.sms_text;
-    let retry = req.body.retry;
-    let reference = req.body.reference;
-    let networkId = req.body.network_id;
-    let debtorName = req.body.debtor_name;
-    let redirect_url = req.body.redirect_url;
-    let transaction_id = req.body.transaction_id;
-    let status = req.body.status;
-    let client_name = req.body.client_name;
-    let client_email = req.body.client_email;
-    let tx_ref = req.body.tx_ref;
-    
+    let provider = req.body.provider
+    let contactPhone = req.body.contact_phone
+    let code = req.body.product_code || req.query.product_code
+    let bundleType = req.body.bundle_type
+    let secondaryCode = req.body.secondary_product_code
+    let ip12 = req.body.ip12
+    let period = req.body.period
+    let areaId = req.body.area_id
+    let scenarioId = req.body.scenario_id
+    let itemsId = req.body.items_id
+    let quantity = req.body.quantity
+    let marketsId = req.body.markets_id
+    let prn = req.body.prn
+    let branchId = req.body.branch_id
+    let penaltyType = req.body.penalty_type
+    let penaltyId = req.body.penalty_id
+    let payerName = req.body.payer_name
+    let uraRef = req.body.ura_ref
+    let uraPlate = req.body.ura_plate
+    let uraPermit = req.body.ura_permit
+    let memo = req.body.memo
+    let listId = req.body.list_id || req.query.list_id
+    let currency = req.body.currency
+    let version = req.body.version
+    let visaDetails = req.body.visa_details
+    let smsFrom = req.body.sms_from
+    let smsTo = req.body.sms_to
+    let smsText = req.body.sms_text
+    let retry = req.body.retry
+    let reference = req.body.reference
+    let networkId = req.body.network_id
+    let debtorName = req.body.debtor_name
+    let redirect_url = req.body.redirect_url
+    let transaction_id = req.body.transaction_id
+    let status = req.body.status
+    let client_name = req.body.client_name
+    let client_email = req.body.client_email
+    let tx_ref = req.body.tx_ref
+
     // Variables for FlutterWave Webbhook
-    let id = req.body.id;
-    let txRef = req.body.txRef;
-    let flwRef = req.body.flwRef;
-    let orderRef = req.body.orderRef;
-    let paymentPlan = req.body.paymentPlan;
-    let createdAt = req.body.createdAt;
-    let charged_amount = req.body.charged_amount;
-    let IP = req.body.IP;
-    let customer = req.body.customer;
-    let entity = req.body.entity;
+    let id = req.body.id
+    let txRef = req.body.txRef
+    let flwRef = req.body.flwRef
+    let orderRef = req.body.orderRef
+    let paymentPlan = req.body.paymentPlan
+    let createdAt = req.body.createdAt
+    let charged_amount = req.body.charged_amount
+    let IP = req.body.IP
+    let customer = req.body.customer
+    let entity = req.body.entity
 
     details = {
-        externalTransactionId,
+        pyRef,
         amount,
         msisdn,
         provider,
@@ -320,10 +454,14 @@ export function getRequestDetails(req, res, next) {
         customer,
         entity,
         data,
-    };
+    }
 
     /*clean up to remove all the null or undefined parameters*/
-    Object.keys(details).forEach((key) => (details[key] == null || details[key] == undefined) && delete details[key]);
-    req.details = details;
-    next();
+    Object.keys(details).forEach(
+        (key) =>
+            (details[key] == null || details[key] == undefined) &&
+            delete details[key],
+    )
+    req.details = details
+    next()
 }
