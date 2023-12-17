@@ -4,6 +4,8 @@
  */
 
 import express = require('express')
+import { STATUS_CODES } from './utilities/constants'
+import { createResponse } from './utilities/utilities'
 const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
 const bodyParser = require('body-parser')
@@ -113,12 +115,9 @@ app.use((req, res, next) => {
  */
 app.use((err, req, res, next) => {
     if (err.status === 404) {
-        res.status(404).json({
-            code: 404,
-            success: false,
-            message: 'Route Not Found',
-            data: {},
-        })
+        let response = createResponse(STATUS_CODES.NOT_FOUND, {}, 'Route Not Found.')
+        res.status(STATUS_CODES.NOT_FOUND).json(response)
+        
     } else {
         // Set locals, only providing error in development
         res.locals.message = err.message

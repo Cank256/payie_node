@@ -9,6 +9,9 @@ import express = require('express')
 let router = express.Router()
 const redisClient = require('../config/redis')
 
+import {STATUS_CODES} from "../utilities/constants";
+import { createResponse } from '../utilities/utilities';
+
 /**
  * Redis Cache key prefix for API routes.
  * @const {string}
@@ -21,12 +24,16 @@ const CACHE_KEY = 'payie_gateway_v1-'
  */
 const CACHE_TTL = 60 * 60
 
+// router.get('/', (req: any, res, next) => {
+//     res.json({code: STATUS_CODES.OK, success: true, message: 'CankPay Gateway v1'});
+// });
+
 /**
  * Route handler for the state endpoint.
  * Retrieves and caches the API state.
  *
  * @function
- * @name GET/state
+ * @name GET/
  * @memberof module:routes/v1_routes
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
@@ -36,9 +43,8 @@ const CACHE_TTL = 60 * 60
  */
 router.get('/', async (req, res, next) => {
     try {
-        // Default API response
         const response = {
-            code: 200,
+            code: STATUS_CODES.OK,
             success: true,
             message: 'CankPay Gateway v1',
         }
@@ -48,7 +54,7 @@ router.get('/', async (req, res, next) => {
 
         // Check if cached data exists
         if (getCached.status === true) {
-            return res.status(200).json(JSON.parse(getCached.data))
+            return res.status(STATUS_CODES.OK).json(JSON.parse(getCached.data))
         } else {
             // Set the API state in the cache if not found
             const setCached = await redisClient.set(
@@ -59,12 +65,14 @@ router.get('/', async (req, res, next) => {
 
             // Check if caching is successful
             if (setCached.status) {
-                return res.status(200).json(response)
+                return res.status(STATUS_CODES.OK).json(response)
             }
         }
     } catch (err) {
         // Handle Redis errors
-        next(err)
+        console.error(err)
+        let theError = createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}, 'Internal Server Error')
+        return res.status(STATUS_CODES.OK).json(theError)
     }
 })
 
