@@ -1,8 +1,25 @@
+/**
+ * @fileOverview Module for handling configuration using nconf.
+ * @module config
+ */
+
 let nconf = require('nconf')
 let fs = require('fs')
 let path = require('path')
 
+/**
+ * Configuration class for managing application settings.
+ * @class
+ * @name Config
+ */
 function Config() {
+    /**
+     * Loads configuration based on the current environment.
+     * @constructor
+     * @memberof module:config
+     * @throws {Object} FileNotFoundException - Thrown if the
+     * configuration file is not found.
+     */
     if (
         process.env.NODE_ENV == 'development' ||
         process.env.NODE_ENV == 'production'
@@ -21,8 +38,20 @@ function Config() {
     }
 }
 
+/**
+ * Retrieves the configuration value for the specified key.
+ * @method
+ * @name get
+ * @memberof module:config.Config
+ * @param {string} key - The key for the configuration value.
+ * @returns {*} - The configuration value associated with the
+ * provided key.
+ */
 Config.prototype.get = function (key) {
     return nconf.get(key)
 }
 
+/**
+ * Exports an instance of the Config class.
+ */
 module.exports = new Config()

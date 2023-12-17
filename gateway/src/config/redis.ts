@@ -1,5 +1,6 @@
 /**
- * @fileOverview Redis configuration and utility functions for caching.
+ * @fileOverview Redis configuration and utility functions
+ * for caching.
  * @module config/redis
  */
 

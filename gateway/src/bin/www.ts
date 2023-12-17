@@ -1,5 +1,6 @@
 /**
- * @fileOverview Entry point for the HTTPS server setup and configuration.
+ * @fileOverview Entry point for the HTTPS server setup
+ * and configuration.
  * @module www
  */
 
@@ -48,7 +49,8 @@ const appPort = normalizePort(process.env.APP_PORT)
 app.set('port', appPort)
 
 /**
- * Create an HTTPS server with the specified options and bind it to the Express application.
+ * Create an HTTPS server with the specified options and
+ * bind it to the Express application.
  */
 const server = https.createServer(options, app)
 
