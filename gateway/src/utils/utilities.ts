@@ -179,17 +179,6 @@ export function generateCode(): string {
 }
 
 /**
- * Generates a unique ID with the specified prefix.
- * @function
- * @name generateUniqueId
- * @returns {string} - Unique ID with the specified prefix.
- * @memberof module:utils/response
- */
-export function generateUniqueId(): string {
-    return uniqid('cankpay-')
-}
-
-/**
  * Inserts a transaction log into the database.
  * @function
  * @name insertTransactionLog

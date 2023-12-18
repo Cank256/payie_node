@@ -10,6 +10,7 @@
  * @requires ./service
  */
 
+require('dotenv').config()
 import {
     LOG_LEVELS,
     STATUS_CODES,
@@ -32,7 +33,6 @@ const agent = new https.Agent({
     rejectUnauthorized: false,
 })
 
-const db = require('../config/db')
 
 /**
  * Class representing the MtnMomo Service for payment transactions.
@@ -152,8 +152,8 @@ export default class MtnMomo extends Service {
         if (!msisdn) {
             return createResponse(STATUS_CODES.BAD_REQUEST, {
                 error: 'msisdn missing',
-                internal_transaction_id: gatewayRef,
-                external_transaction_id: pyRef,
+                gateway_ref: gatewayRef,
+                py_ref: pyRef,
             })
         }
 
@@ -200,4 +200,5 @@ export default class MtnMomo extends Service {
             )
         }
     }
+
 }
