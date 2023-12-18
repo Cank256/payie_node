@@ -9,13 +9,19 @@ import express = require('express')
 let router = express.Router()
 const redisClient = require('../config/redis')
 
-import { STATUS_CODES } from '../utils/constants'
-import { createResponse, getServiceProviders } from '../utils/utilities'
+import { LOG_LEVELS, STATUS_CODES } from '../utils/constants'
+import {
+    createResponse,
+    getServiceProviders,
+    insertTransactionLog,
+    updateTransactionLog,
+} from '../utils/utilities'
 import {
     authenticateRequest,
     getRequestDetails,
     validateRequest,
 } from '../middlewares'
+import { Service } from '../services/service'
 
 /**
  * Redis Cache key prefix for API routes.
@@ -91,6 +97,51 @@ router.get(
                 'Internal Server Error',
             )
             return res.status(STATUS_CODES.OK).json(theError)
+        }
+    },
+)
+
+/**
+ * Handles a POST request to validate an account, following a series of middleware operations.
+ * @function
+ * @name POST/validate-account
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {function} next - The next middleware function.
+ * @returns {Promise<void>} - A promise resolving to a JSON response sent to the client.
+ */
+router.post(
+    '/validate-account',
+    authenticateRequest,
+    validateRequest,
+    getRequestDetails,
+    async function (req: any, res, next) {
+        try {
+            // Extract the service provider instance from the request
+            let serviceProvider: Service = req.serviceProvider
+
+            // Insert transaction log with INFO level
+            await insertTransactionLog(req, LOG_LEVELS.INFO)
+
+            // Validate the account using the service provider's specific method
+            let response = await serviceProvider.validateAccount(req)
+
+            // Update transaction log with the validation response
+            await updateTransactionLog(req, response)
+
+            // If the response is not sent yet, send the JSON response to the client
+            if (!res.headersSent) {
+                res.status(response.code).json(response)
+            }
+        } catch (error) {
+            // Handle any unexpected errors and send a 500 Internal Server Error response
+            console.error(error)
+            let errorResponse = createResponse(
+                STATUS_CODES.INTERNAL_SERVER_ERROR,
+                {},
+                'Internal Server Error',
+            )
+            res.status(errorResponse.code).json(errorResponse)
         }
     },
 )

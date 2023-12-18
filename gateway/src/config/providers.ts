@@ -24,7 +24,7 @@ function Config() {
         process.env.NODE_ENV == 'development' ||
         process.env.NODE_ENV == 'production'
     ) {
-        let configFile = path.join(__dirname, '/../.providers.json')
+        let configFile = path.join(__dirname, '../../.providers.json')
         if (!fs.existsSync(configFile)) {
             throw {
                 name: 'FileNotFoundException',

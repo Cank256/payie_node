@@ -11,8 +11,7 @@
       "collection_subscription_key": "",
       "payout_subscription_key": "",
       "provider_callback_url": "",
-      "parameters": ["currency", "amount", "msisdn", "async", "callback_url", "description", "type"],
-      "just": ""
+      "parameters": ["currency", "amount", "msisdn", "async", "callback_url", "description", "type"]
     },
     "card": {
       "server_url": "https://api.flutterwave.com/v3/payments",
@@ -29,7 +28,7 @@
       "name": "SMS",
       "code": "sms",
       "client_id": "",
-      "secret": "" 
+      "secret_key": "" 
     }
   }
 }

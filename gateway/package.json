@@ -12,10 +12,10 @@
   "scripts": {
     "format": "prettier --write 'src/**/*.ts' --config .prettierrc",
     "build": "tsc --build",
-    "dev": "tsc --build && nodemon ./dist/bin/www.js",
-    "start": "pm2 start ./dist/bin/www.js --name payie_gateway",
+    "dev": "export NODE_ENV=development || set NODE_ENV=development&&tsc --build && nodemon ./dist/bin/www.js",
+    "start": "export NODE_ENV=development || set NODE_ENV=development&&pm2 start ./dist/bin/www.js --name payie_gateway",
     "stop": "pm2 stop payie_gateway",
-    "restart": "pm2 restart payie_gateway"
+    "restart": "export NODE_ENV=development || set NODE_ENV=development&&pm2 restart payie_gateway"
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.5",
@@ -32,6 +32,7 @@
   "dependencies": {
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.6",
+    "cross-fetch": "^4.0.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-timeout-handler": "^2.2.2",
@@ -42,6 +43,7 @@
     "path": "^0.12.7",
     "pm2": "^5.3.0",
     "redis": "^4.6.11",
+    "timers": "^0.1.1",
     "underscore.string": "^3.3.6",
     "uniqid": "^5.4.0"
   }

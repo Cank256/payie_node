@@ -69,6 +69,7 @@ export interface IConfig {
     client_id?: string
     api_key?: string
     api_user?: string
+    provider_env?: string
     allowed_callback_ips?: string[]
     collection_subscription_key?: string
     payout_subscription_key?: string
@@ -161,7 +162,7 @@ export function getServiceProviders(): IResponse {
  */
 export async function getServiceProvider(code: string): Promise<any> {
     let providerConfig = config.get(`service_providers:${code}`)
-    let serviceProvider = await import(`./services/${dasherize(code)}`)
+    let serviceProvider = await import(`../services/${dasherize(code)}`)
     return new serviceProvider.default(providerConfig)
 }
 
@@ -227,6 +228,48 @@ export async function insertTransactionLog(
             createtime: new Date(),
         })
     } catch (err) {
+        console.log(err.message)
+    }
+}
+
+/**
+ * Inserts a log entry for messages.
+ * @function
+ * @name insertMessageLog
+ * @param {Object} req - The request object.
+ * @param {string} level - The log level.
+ * @param {string} message - The log message.
+ * @returns {Promise<Object>} - A promise resolving to the result of the log insertion.
+ */
+export async function insertMessageLog(
+    req: any,
+    level: string,
+    message: string,
+) {
+    // Extract relevant information from the request object
+    let gatewayId = req.gatewayId
+    let serviceProvider = req.get('service')
+    let requestBody = req.body
+    let url = req.originalUrl
+    let ipAddress = req.ip
+
+    try {
+        // Access the MongoDB collection for message logs
+        let collection = db.get().collection(process.env.DB_MESSAGES_COLLECTION)
+
+        // Insert a log entry into the collection
+        return await collection.insertOne({
+            ipAddress,
+            gatewayId,
+            serviceProvider,
+            requestBody,
+            url,
+            level,
+            message,
+            createtime: new Date(),
+        })
+    } catch (err) {
+        // Handle any errors that occur during the log insertion
         console.log(err.message)
     }
 }
