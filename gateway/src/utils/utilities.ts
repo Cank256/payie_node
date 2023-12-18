@@ -4,12 +4,12 @@
  * @requires constants
  */
 
-require('dotenv').config();
-const dasherize = require('underscore.string/dasherize');
-const uniqid = require('uniqid');
-import { ERROR_MESSAGES, LOG_LEVELS, STATUS_CODES } from './constants';
-let config = require('../config/providers');
-const db = require('../config/db');
+require('dotenv').config()
+const dasherize = require('underscore.string/dasherize')
+const uniqid = require('uniqid')
+import { ERROR_MESSAGES, LOG_LEVELS, STATUS_CODES } from './constants'
+let config = require('../config/providers')
+const db = require('../config/db')
 
 /**
  * Interface representing a standardized API response.
@@ -257,17 +257,22 @@ export async function transactionExists(pyRef: string) {
  * @memberof module:utils/response
  */
 export async function updateTransactionLog(req: any, response: IResponse) {
-    let gatewayRef = req.gatewayRef;
+    let gatewayRef = req.gatewayRef
     try {
-        let collection = db.get().collection(process.env.DB_TRANSACTIONS_COLLECTION);
-        return await collection.updateOne({gatewayRef: gatewayRef}, {
-            $set: {
-                responseBody: response,
-                updatedAt: new Date()
-            }
-        });
+        let collection = db
+            .get()
+            .collection(process.env.DB_TRANSACTIONS_COLLECTION)
+        return await collection.updateOne(
+            { gatewayRef: gatewayRef },
+            {
+                $set: {
+                    responseBody: response,
+                    updatedAt: new Date(),
+                },
+            },
+        )
     } catch (err) {
-        console.log(err.message);
+        console.log(err.message)
     }
 }
 
@@ -280,17 +285,25 @@ export async function updateTransactionLog(req: any, response: IResponse) {
  * @returns {Promise<any>} - Promise that resolves when the transaction log is updated.
  * @memberof module:utils/response
  */
-export async function updateLogByExternalRef(pyRef: string, response: IResponse) {
+export async function updateLogByExternalRef(
+    pyRef: string,
+    response: IResponse,
+) {
     /*this function updates the transaction log where the pyRef is the given value*/
     try {
-        let collection = db.get().collection(process.env.DB_TRANSACTIONS_COLLECTION);
-        return await collection.updateOne({"requestBody.py_ref": pyRef}, {
-            $set: {
-                responseBody: response,
-                updatedAt: new Date()
-            }
-        });
+        let collection = db
+            .get()
+            .collection(process.env.DB_TRANSACTIONS_COLLECTION)
+        return await collection.updateOne(
+            { 'requestBody.py_ref': pyRef },
+            {
+                $set: {
+                    responseBody: response,
+                    updatedAt: new Date(),
+                },
+            },
+        )
     } catch (err) {
-        console.log(err.message);
+        console.log(err.message)
     }
 }

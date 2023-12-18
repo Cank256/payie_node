@@ -1,5 +1,5 @@
-import { STATUS_CODES } from "../utils/constants"
-import { createResponse } from "../utils/utilities"
+import { STATUS_CODES } from '../utils/constants'
+import { createResponse } from '../utils/utilities'
 
 /**
  * Middleware to validate the content type of incoming requests.

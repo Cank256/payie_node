@@ -10,11 +10,12 @@ let router = express.Router()
 const redisClient = require('../config/redis')
 
 import { STATUS_CODES } from '../utils/constants'
+import { createResponse, getServiceProviders } from '../utils/utilities'
 import {
-    createResponse,
-    getServiceProviders,
-} from '../utils/utilities'
-import { authenticateRequest, getRequestDetails, validateRequest } from '../middlewares'
+    authenticateRequest,
+    getRequestDetails,
+    validateRequest,
+} from '../middlewares'
 
 /**
  * Redis Cache key prefix for API routes.
@@ -49,40 +50,49 @@ router.get('/', (req: any, res, next) => {
  * @returns {Object} - JSON response containing the API state.
  * @throws {Error} - Throws an error if there's an issue with Redis operations.
  */
-router.get('/providers', authenticateRequest, validateRequest, getRequestDetails, async (req, res, next) => {
-    try {
-        let response = getServiceProviders();
+router.get(
+    '/providers',
+    authenticateRequest,
+    validateRequest,
+    getRequestDetails,
+    async (req, res, next) => {
+        try {
+            let response = getServiceProviders()
 
-        // Attempt to retrieve cached data from Redis
-        const getCached = await redisClient.get(CACHE_KEY + 'providers');
+            // Attempt to retrieve cached data from Redis
+            const getCached = await redisClient.get(CACHE_KEY + 'providers')
 
-        // Check if cached data exists and is different from the response
-        if (getCached.status === true && JSON.parse(getCached.data) !== response) {
-            // Update the cached data with the new response
-            const setCached = await redisClient.set(
-                CACHE_KEY + 'providers',
-                JSON.stringify(response),
-                CACHE_TTL,
-            );
+            // Check if cached data exists and is different from the response
+            if (
+                getCached.status === true &&
+                JSON.parse(getCached.data) !== response
+            ) {
+                // Update the cached data with the new response
+                const setCached = await redisClient.set(
+                    CACHE_KEY + 'providers',
+                    JSON.stringify(response),
+                    CACHE_TTL,
+                )
 
-            // Check if caching is successful
-            if (setCached.status) {
-                return res.status(STATUS_CODES.OK).json(response);
+                // Check if caching is successful
+                if (setCached.status) {
+                    return res.status(STATUS_CODES.OK).json(response)
+                }
             }
-        }
 
-        // Return the cached data or the response if caching fails
-        return res.status(STATUS_CODES.OK).json(JSON.parse(getCached.data));
-    } catch (err) {
-        // Handle Redis errors
-        console.error(err);
-        let theError = createResponse(
-            STATUS_CODES.INTERNAL_SERVER_ERROR,
-            {},
-            'Internal Server Error',
-        );
-        return res.status(STATUS_CODES.OK).json(theError);
-    }
-});
+            // Return the cached data or the response if caching fails
+            return res.status(STATUS_CODES.OK).json(JSON.parse(getCached.data))
+        } catch (err) {
+            // Handle Redis errors
+            console.error(err)
+            let theError = createResponse(
+                STATUS_CODES.INTERNAL_SERVER_ERROR,
+                {},
+                'Internal Server Error',
+            )
+            return res.status(STATUS_CODES.OK).json(theError)
+        }
+    },
+)
 
 module.exports = router

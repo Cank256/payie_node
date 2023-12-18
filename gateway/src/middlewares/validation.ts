@@ -1,6 +1,11 @@
-import { ERROR_MESSAGES, LOG_LEVELS, STATUS_CODES } from "../utils/constants"
-import { createResponse, getServiceProvider, insertTransactionLog, transactionExists } from "../utils/utilities"
-let config = require('../config/providers');
+import { ERROR_MESSAGES, LOG_LEVELS, STATUS_CODES } from '../utils/constants'
+import {
+    createResponse,
+    getServiceProvider,
+    insertTransactionLog,
+    transactionExists,
+} from '../utils/utilities'
+let config = require('../config/providers')
 
 /**
  * Middleware to validate and process incoming requests.
