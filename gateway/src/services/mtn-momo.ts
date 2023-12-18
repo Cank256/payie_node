@@ -33,6 +33,7 @@ const agent = new https.Agent({
     rejectUnauthorized: false,
 })
 
+const db = require('../config/db')
 
 /**
  * Class representing the MtnMomo Service for payment transactions.
@@ -201,4 +202,214 @@ export default class MtnMomo extends Service {
         }
     }
 
+    /**
+     * Initiates a collection transaction for Mobile Money payments.
+     *
+     * @async
+     * @function
+     * @param {Object} req - The request object containing transaction details.
+     * @param {function} callback - The callback function to handle the response.
+     * @returns {Promise<IResponse>} - A promise that resolves to the transaction response.
+     */
+    async collect(req: any, callback): Promise<IResponse> {
+        // Extract transaction details from the request.
+        let gatewayRef = req.gatewayRef
+        let details = req.details
+        let msisdn = details.msisdn
+        let amount = Number.parseInt(details.amount)
+        let pyRef = details.pyRef
+        let currency = details.currency || 'UGX'
+
+        // Validate required parameters.
+        if (!msisdn) {
+            return callback(
+                createResponse(
+                    STATUS_CODES.BAD_REQUEST,
+                    {
+                        gateway_ref: gatewayRef,
+                        py_ref: pyRef,
+                    },
+                    'Missing msisdn.',
+                ),
+            )
+        }
+
+        if (!amount) {
+            return callback(
+                createResponse(
+                    STATUS_CODES.BAD_REQUEST,
+                    {
+                        gateway_ref: gatewayRef,
+                        py_ref: pyRef,
+                    },
+                    'Missing amount.',
+                ),
+            )
+        }
+
+        // Set default description if not provided.
+        let description = details.description || 'Payie Collection'
+        
+        // Prepare parameters for the collection request.
+        let parameters = {
+            amount: amount.toString(),
+            currency: currency,
+            externalId: gatewayRef,
+            payer: {
+                partyIdType: 'MSISDN',
+                partyId: msisdn,
+            },
+            payerMessage: description,
+            payeeNote: description,
+        }
+
+        // Generate a reference ID for the transaction.
+        let referenceId = uuidv4()
+
+        // Set up the request URL for initiating the collection.
+        let requestUrl =
+            MtnMomo.stripTrailingSlash(this.collectionUrl) +
+            '/v1_0/requesttopay'
+
+        // Obtain an access token for authenticating the API request.
+        let accessTokenRequest: IResponse = await this.getAccessToken(
+            TRANS_TYPES.COLLECTION,
+        )
+
+        // Check if the access token is successfully obtained.
+        if (accessTokenRequest.code == STATUS_CODES.OK) {
+            try {
+                // Access the MongoDB collection for storing transaction details.
+                let collection = db
+                    .get()
+                    .collection(process.env.DB_MOMO_IPS_COLLECTION)
+
+                // Insert a record for the initiated transaction in the database.
+                await collection.insertOne({
+                    reference: gatewayRef,
+                    py_ref: pyRef,
+                    msisdn,
+                    amount,
+                    status: TRANS_STATUS.PENDING,
+                    type: TRANS_TYPES.COLLECTION,
+                    x_reference_id: referenceId,
+                    provider_transaction_id: null,
+                    message: 'Transaction Initiated',
+                    created_at: new Date(),
+                    callback_received: false,
+                    completed_by: null,
+                    completed_at: null,
+                    callback_time: null,
+                    meta: {},
+                })
+
+                // Perform the collection request using the configured service provider.
+                await fetch(requestUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(parameters),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${accessTokenRequest.data.access_token}`,
+                        'X-Reference-Id': referenceId,
+                        'X-Target-Environment': this.provider_env || 'sandbox',
+                        'Ocp-Apim-Subscription-Key': this.collectionSubscriptionKey,
+                    },
+                    agent,
+                }).then(async (response) => {
+                    // Check if the request was successful.
+                    if (response.status == STATUS_CODES.OK || response.status == STATUS_CODES.ACCEPTED ) {
+                        try {
+                            let transaction = await collection.findOne({
+                                reference: gatewayRef,
+                            })
+
+                            await collection.updateOne(transaction, {
+                                $set: {
+                                    status: TRANS_STATUS.COMPLETED,
+                                    completed_at: new Date(),
+                                    completed_by: 'REQUEST',
+                                    message:
+                                        response.status + '-' + response.statusText ||
+                                        'Transaction Request Failed. Service Provider Unreachable',
+                                },
+                            })
+
+                            return callback(
+                                createResponse(STATUS_CODES.OK, {
+                                    msisdn,
+                                    amount,
+                                    message: 'Transaction successfully completed.',
+                                    status: transaction.status,
+                                    provider_id: transaction.provider_transaction_id,
+                                    gateway_ref: gatewayRef,
+                                    py_ref: pyRef,
+                                }),
+                            )
+                            
+                        } catch (e) {
+                            // Log any errors that occur during the process.
+                            await insertMessageLog(
+                                req,
+                                LOG_LEVELS.DEBUG,
+                                e.message,
+                            )
+                        }
+                    } else {
+                        // Log the error and update the transaction status in the database.
+                        await insertMessageLog(
+                            req,
+                            LOG_LEVELS.DEBUG,
+                            response.status + '-' + response.statusText,
+                        )
+
+                        // Query the record and edit it in case of an error.
+                        let record = await collection.findOne({
+                            reference: gatewayRef,
+                        })
+
+                        await collection.updateOne(record, {
+                            $set: {
+                                status: TRANS_STATUS.FAILED,
+                                completed_at: new Date(),
+                                completed_by: 'REQUEST',
+                                message: response.statusText ||
+                                    'Transaction Request Failed.',
+                            },
+                        })
+
+                        return callback(
+                            createResponse(
+                                STATUS_CODES.UNPROCESSABLE_ENTITY,
+                                {
+                                    msisdn,
+                                    amount,
+                                    message: record.message,
+                                    status: record.status,
+                                    gateway_ref: gatewayRef,
+                                    py_ref: pyRef,
+                                },
+                            ),
+                        )
+                    }
+                })
+            } catch (e) {
+                // Log any unexpected errors that may occur.
+                await insertMessageLog(req, LOG_LEVELS.DEBUG, e.message)
+                return callback(
+                    createResponse(
+                        STATUS_CODES.INTERNAL_SERVER_ERROR,
+                        {
+                            gateway_ref: gatewayRef,
+                            py_ref: pyRef,
+                            error: e,
+                        },
+                        e.message,
+                    ),
+                )
+            }
+        } else {
+            // Return the access token request response in case of failure.
+            return callback(accessTokenRequest)
+        }
+    }
 }

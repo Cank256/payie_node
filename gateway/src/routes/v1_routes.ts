@@ -146,4 +146,55 @@ router.post(
     },
 )
 
+/**
+ * Handle POST requests to '/collect'.
+ * Initiates a collection transaction using the configured service provider.
+ * @name POST/collect
+ * @function
+ * @memberof collectRouter
+ * @async
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {function} next - The next middleware function.
+ * @returns {Promise<void>} - The response is sent to the client.
+ * @throws {Error} - Throws an error if the transaction log update fails.
+ */
+router.post(
+    '/collect',
+    authenticateRequest,
+    validateRequest,
+    getRequestDetails,
+    async function (req: any, res, next) {
+        let serviceProvider: Service = req.serviceProvider
+
+        // Log the initiation of the collection transaction.
+        await insertTransactionLog(req, LOG_LEVELS.INFO)
+
+        // Check if the service provider requires a callback for this transaction.
+        if (serviceProvider.requestWithCallback()) {
+            // Initiate the collection transaction with callback.
+            await serviceProvider.collect(req, async function (response) {
+                // Update the transaction log with the response.
+                await updateTransactionLog(req, response)
+
+                // Send the response to the client if the headers are not sent.
+                if (!res.headersSent) {
+                    res.status(response.code).json(response)
+                }
+            })
+        } else {
+            // Initiate the collection transaction without callback.
+            let response = await serviceProvider.collect(req)
+
+            // Update the transaction log with the response.
+            await updateTransactionLog(req, response)
+
+            // Send the response to the client if the headers are not sent.
+            if (!res.headersSent) {
+                res.status(response.code).json(response)
+            }
+        }
+    },
+)
+
 module.exports = router
