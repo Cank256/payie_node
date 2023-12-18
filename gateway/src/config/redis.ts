@@ -5,8 +5,8 @@
  */
 
 const Redis = require('redis')
-import { STATUS_CODES } from '../utilities/constants'
-import { createResponse } from '../utilities/utilities'
+import { STATUS_CODES } from '../utils/constants'
+import { createResponse } from '../utils/utilities'
 
 /**
  * Redis client configuration.

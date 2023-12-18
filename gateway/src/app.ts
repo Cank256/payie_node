@@ -4,8 +4,8 @@
  */
 
 import express = require('express')
-import { STATUS_CODES } from './utilities/constants'
-import { createResponse } from './utilities/utilities'
+import { STATUS_CODES } from './utils/constants'
+import { createResponse } from './utils/utilities'
 const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
 const bodyParser = require('body-parser')

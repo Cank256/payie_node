@@ -45,8 +45,8 @@ export const LOG_LEVELS = {
  */
 export const ERROR_MESSAGES = {
     NON_UNIQUE_TRANSACTION:
-        'Transaction already exists. Please provide a unique gateway transaction id.',
-    MISSING_TRANSACTION_ID: 'Missing gateway transaction id.',
+        'Transaction already exists. Please provide a unique py_ref.',
+    MISSING_API_REF: 'Missing api reference (py_ref).',
     MISSING_PROVIDER_HEADER: 'Missing provider header.',
     UNKNOWN_SERVICE_PROVIDER: 'Unknown service provider.',
     UNAUTHORIZED_ACCESS: 'Unauthorized API access.',

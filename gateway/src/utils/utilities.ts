@@ -4,12 +4,12 @@
  * @requires constants
  */
 
-require('dotenv').config()
-const dasherize = require('underscore.string/dasherize')
-const uniqid = require('uniqid')
-import { ERROR_MESSAGES, LOG_LEVELS, STATUS_CODES } from './constants'
-let config = require('../config/providers')
-const db = require('../config/db')
+require('dotenv').config();
+const dasherize = require('underscore.string/dasherize');
+const uniqid = require('uniqid');
+import { ERROR_MESSAGES, LOG_LEVELS, STATUS_CODES } from './constants';
+let config = require('../config/providers');
+const db = require('../config/db');
 
 /**
  * Interface representing a standardized API response.
@@ -128,124 +128,6 @@ export function getStatusCodeMessage(code: number, extraInfo: string): string {
 }
 
 /**
- * Middleware to validate the content type of incoming requests.
- * @function
- * @name getRequestData
- * @param {Object} req - The request object.
- * @param {Object} res - The response object.
- * @param {function} next - The next middleware function.
- * @returns {Object} - JSON response object indicating success or failure.
- * @memberof module:utils/response
- */
-export async function getRequestData(req, res, next) {
-    if (!req.is('*/json')) {
-        let response = createResponse(
-            STATUS_CODES.BAD_REQUEST,
-            {},
-            'Unrecognized Request Content Type',
-        )
-        return res.status(response.code).json(response)
-    } else {
-        next()
-    }
-}
-
-
-export async function authenticateRequest(req, res, next) {
-    let gatewayRef = req.gatewayRef;
-    const authorizedIPs = JSON.parse(process.env.APP_AUTHORIZED_IPS || '[]');
-    
-    if (req.get('api-key') !== process.env.APP_API_KEY || !authorizedIPs.includes(req.ip)) {
-        let response = createResponse(STATUS_CODES.BAD_REQUEST, {transaction_id: gatewayRef}, ERROR_MESSAGES.UNAUTHORIZED_ACCESS);
-        await insertTransactionLog(req, LOG_LEVELS.CRITICAL, ERROR_MESSAGES.UNAUTHORIZED_ACCESS, response);
-        return res.status(response.code).json(response);
-    }
-    next();
-}
-
-export async function validateRequest(req, res, next) {
-    let gatewayRef = req.gatewayRef
-    //validate external transaction id
-    let pyRef = req.body.py_ref || req.query.py_ref
-    if (!pyRef) {
-        let response = createResponse(
-            STATUS_CODES.BAD_REQUEST,
-            {
-                gateway_ref: gatewayRef,
-            },
-            ERROR_MESSAGES.MISSING_TRANSACTION_ID,
-        )
-        await insertTransactionLog(
-            req,
-            LOG_LEVELS.INFO,
-            ERROR_MESSAGES.MISSING_TRANSACTION_ID,
-            response,
-        )
-        return res.status(response.code).json(response)
-    }
-
-    if (await transactionExists(pyRef)) {
-        let response = createResponse(
-            STATUS_CODES.BAD_REQUEST,
-            {
-                gateway_ref: gatewayRef,
-                py_ref: pyRef,
-            },
-            ERROR_MESSAGES.NON_UNIQUE_TRANSACTION,
-        )
-        await insertTransactionLog(
-            req,
-            LOG_LEVELS.INFO,
-            ERROR_MESSAGES.NON_UNIQUE_TRANSACTION,
-            response,
-        )
-        return res.status(response.code).json(response)
-    }
-
-    //validate service provider
-    if (!req.get('service-provider')) {
-        let response = createResponse(
-            STATUS_CODES.BAD_REQUEST,
-            {
-                gateway_ref: gatewayRef,
-                py_ref: pyRef,
-            },
-            ERROR_MESSAGES.MISSING_PROVIDER_HEADER,
-        )
-        await insertTransactionLog(
-            req,
-            LOG_LEVELS.INFO,
-            ERROR_MESSAGES.MISSING_PROVIDER_HEADER,
-            response,
-        )
-        return res.status(response.code).json(response)
-    }
-
-    if (!config.get(`service_providers:${req.get('service-provider')}`)) {
-        let response = createResponse(
-            STATUS_CODES.BAD_REQUEST,
-            {
-                gateway_ref: gatewayRef,
-                py_ref: pyRef,
-            },
-            ERROR_MESSAGES.UNKNOWN_SERVICE_PROVIDER,
-        )
-        await insertTransactionLog(
-            req,
-            LOG_LEVELS.INFO,
-            ERROR_MESSAGES.UNKNOWN_SERVICE_PROVIDER,
-            response,
-        )
-        return res.status(response.code).json(response)
-    }
-    //Add service provider to request
-    req.serviceProvider = await getServiceProvider(req.get('service-provider'))
-
-    //call next middleware
-    next()
-}
-
-/**
  * Retrieves a list of configured service providers.
  * @function
  * @name getServiceProviders
@@ -269,22 +151,54 @@ export function getServiceProviders(): IResponse {
     return createResponse(STATUS_CODES.OK, providers)
 }
 
+/**
+ * Retrieves details of a specific service provider based on the provided code.
+ * @function
+ * @name getServiceProvider
+ * @param {string} code - Code of the service provider.
+ * @returns {Promise<any>} - Promise that resolves to the service provider details.
+ * @memberof module:utils/response
+ */
 export async function getServiceProvider(code: string): Promise<any> {
     let providerConfig = config.get(`service_providers:${code}`)
     let serviceProvider = await import(`./services/${dasherize(code)}`)
     return new serviceProvider.default(providerConfig)
 }
 
-/*use this to generate transaction IDs*/
+/**
+ * Generates a unique transaction ID.
+ * @function
+ * @name generateCode
+ * @returns {string} - Unique transaction ID.
+ * @memberof module:utils/response
+ */
 export function generateCode(): string {
     let code = new Date().getTime() + Math.floor(Math.random() * 100000000)
     return code.toString()
 }
 
+/**
+ * Generates a unique ID with the specified prefix.
+ * @function
+ * @name generateUniqueId
+ * @returns {string} - Unique ID with the specified prefix.
+ * @memberof module:utils/response
+ */
 export function generateUniqueId(): string {
     return uniqid('cankpay-')
 }
 
+/**
+ * Inserts a transaction log into the database.
+ * @function
+ * @name insertTransactionLog
+ * @param {Object} req - The request object.
+ * @param {string} level - Log level.
+ * @param {string} [message] - Log message.
+ * @param {IResponse} [response] - API response associated with the transaction.
+ * @returns {Promise<any>} - Promise that resolves when the transaction log is inserted.
+ * @memberof module:utils/response
+ */
 export async function insertTransactionLog(
     req: any,
     level: string,
@@ -300,7 +214,7 @@ export async function insertTransactionLog(
     try {
         let collection = db
             .get()
-            .collection(config.get('db:collections:transactions'))
+            .collection(process.env.DB_TRANSACTIONS_COLLECTION)
         return await collection.insertOne({
             ipAddress,
             gatewayRef,
@@ -317,19 +231,35 @@ export async function insertTransactionLog(
     }
 }
 
+/**
+ * Checks if a transaction with the given external reference exists in the database.
+ * @function
+ * @name transactionExists
+ * @param {string} pyRef - External reference ID.
+ * @returns {Promise<boolean>} - Promise that resolves to a boolean indicating whether the transaction exists.
+ * @memberof module:utils/response
+ */
 export async function transactionExists(pyRef: string) {
     let count = await db
         .get()
-        .collection(config.get('db:collections:transactions'))
+        .collection(process.env.DB_TRANSACTIONS_COLLECTION)
         .count({ 'requestBody.py_ref': pyRef })
     return count > 0
 }
 
-
+/**
+ * Updates the transaction log with the provided response.
+ * @function
+ * @name updateTransactionLog
+ * @param {Object} req - The request object.
+ * @param {IResponse} response - API response to be updated in the transaction log.
+ * @returns {Promise<any>} - Promise that resolves when the transaction log is updated.
+ * @memberof module:utils/response
+ */
 export async function updateTransactionLog(req: any, response: IResponse) {
     let gatewayRef = req.gatewayRef;
     try {
-        let collection = db.get().collection(config.get('db:collections:transactions'));
+        let collection = db.get().collection(process.env.DB_TRANSACTIONS_COLLECTION);
         return await collection.updateOne({gatewayRef: gatewayRef}, {
             $set: {
                 responseBody: response,
@@ -341,10 +271,19 @@ export async function updateTransactionLog(req: any, response: IResponse) {
     }
 }
 
+/**
+ * Updates the transaction log with the provided response based on the external reference.
+ * @function
+ * @name updateLogByExternalRef
+ * @param {string} pyRef - External reference ID.
+ * @param {IResponse} response - API response to be updated in the transaction log.
+ * @returns {Promise<any>} - Promise that resolves when the transaction log is updated.
+ * @memberof module:utils/response
+ */
 export async function updateLogByExternalRef(pyRef: string, response: IResponse) {
     /*this function updates the transaction log where the pyRef is the given value*/
     try {
-        let collection = db.get().collection(config.get('db:collections:transactions'));
+        let collection = db.get().collection(process.env.DB_TRANSACTIONS_COLLECTION);
         return await collection.updateOne({"requestBody.py_ref": pyRef}, {
             $set: {
                 responseBody: response,
@@ -354,128 +293,4 @@ export async function updateLogByExternalRef(pyRef: string, response: IResponse)
     } catch (err) {
         console.log(err.message);
     }
-}
-
-export function getRequestDetails(req, res, next) {
-    let details = {}
-    let pyRef = req.body.py_ref || req.query.py_ref
-    let data = req.body.data
-    let amount = req.body.amount
-    let msisdn = req.body.msisdn
-
-    /*some of the parameters used by PayWay*/
-    let provider = req.body.provider
-    let contactPhone = req.body.contact_phone
-    let code = req.body.product_code || req.query.product_code
-    let bundleType = req.body.bundle_type
-    let secondaryCode = req.body.secondary_product_code
-    let ip12 = req.body.ip12
-    let period = req.body.period
-    let areaId = req.body.area_id
-    let scenarioId = req.body.scenario_id
-    let itemsId = req.body.items_id
-    let quantity = req.body.quantity
-    let marketsId = req.body.markets_id
-    let prn = req.body.prn
-    let branchId = req.body.branch_id
-    let penaltyType = req.body.penalty_type
-    let penaltyId = req.body.penalty_id
-    let payerName = req.body.payer_name
-    let uraRef = req.body.ura_ref
-    let uraPlate = req.body.ura_plate
-    let uraPermit = req.body.ura_permit
-    let memo = req.body.memo
-    let listId = req.body.list_id || req.query.list_id
-    let currency = req.body.currency
-    let version = req.body.version
-    let visaDetails = req.body.visa_details
-    let smsFrom = req.body.sms_from
-    let smsTo = req.body.sms_to
-    let smsText = req.body.sms_text
-    let retry = req.body.retry
-    let reference = req.body.reference
-    let networkId = req.body.network_id
-    let debtorName = req.body.debtor_name
-    let redirect_url = req.body.redirect_url
-    let transaction_id = req.body.transaction_id
-    let status = req.body.status
-    let client_name = req.body.client_name
-    let client_email = req.body.client_email
-    let tx_ref = req.body.tx_ref
-
-    // Variables for FlutterWave Webbhook
-    let id = req.body.id
-    let txRef = req.body.txRef
-    let flwRef = req.body.flwRef
-    let orderRef = req.body.orderRef
-    let paymentPlan = req.body.paymentPlan
-    let createdAt = req.body.createdAt
-    let charged_amount = req.body.charged_amount
-    let IP = req.body.IP
-    let customer = req.body.customer
-    let entity = req.body.entity
-
-    details = {
-        pyRef,
-        amount,
-        msisdn,
-        provider,
-        contactPhone,
-        code,
-        bundleType,
-        secondaryCode,
-        ip12,
-        period,
-        areaId,
-        scenarioId,
-        itemsId,
-        quantity,
-        marketsId,
-        prn,
-        branchId,
-        penaltyType,
-        penaltyId,
-        payerName,
-        uraRef,
-        uraPlate,
-        uraPermit,
-        memo,
-        listId,
-        currency,
-        version,
-        visaDetails,
-        smsFrom,
-        smsTo,
-        smsText,
-        retry,
-        reference,
-        networkId,
-        debtorName,
-        redirect_url,
-        transaction_id,
-        tx_ref,
-        status,
-        client_name,
-        client_email,
-        txRef,
-        id,
-        flwRef,
-        orderRef,
-        paymentPlan,
-        createdAt,
-        charged_amount,
-        IP,
-        customer,
-        entity,
-        data,
-    }
-
-    /*clean up to remove all the null or undefined parameters*/
-    Object.keys(details).forEach(
-        (key) =>
-            (details[key] == null || details[key] == undefined) &&
-            delete details[key],
-    )
-    req.details = details
-    next()
 }

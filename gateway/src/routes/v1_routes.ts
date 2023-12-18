@@ -9,15 +9,12 @@ import express = require('express')
 let router = express.Router()
 const redisClient = require('../config/redis')
 
-import { LOG_LEVELS, STATUS_CODES } from '../utilities/constants'
+import { STATUS_CODES } from '../utils/constants'
 import {
-    authenticateRequest,
     createResponse,
-    getRequestDetails,
     getServiceProviders,
-    insertTransactionLog,
-    validateRequest,
-} from '../utilities/utilities'
+} from '../utils/utilities'
+import { authenticateRequest, getRequestDetails, validateRequest } from '../middlewares'
 
 /**
  * Redis Cache key prefix for API routes.
@@ -52,7 +49,7 @@ router.get('/', (req: any, res, next) => {
  * @returns {Object} - JSON response containing the API state.
  * @throws {Error} - Throws an error if there's an issue with Redis operations.
  */
-router.get('/providers', authenticateRequest, async (req, res, next) => {
+router.get('/providers', authenticateRequest, validateRequest, getRequestDetails, async (req, res, next) => {
     try {
         let response = getServiceProviders();
 
