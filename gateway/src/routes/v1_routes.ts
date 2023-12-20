@@ -195,6 +195,58 @@ router.post(
             }
         }
     },
+
+    /**
+     * Handle POST requests to '/transfer'.
+     * Initiates a money transfer transaction using the configured service provider.
+     * This route uses different middleware to authenticate the request, validate it, and
+     * obtain necessary details before processing the transfer.
+     * Depending on the service provider's configuration, the transfer might require a callback.
+     * 
+     * @name POST/transfer
+     * @function
+     * @memberof transferRouter
+     * @async
+     * @param {Object} req - The request object, containing transfer details and service provider information.
+     * @param {Object} res - The response object used to send back the transfer status.
+     * @param {function} next - The next middleware function in the stack.
+     * @returns {Promise<void>} - The response is sent to the client indicating the transfer result.
+     * @throws {Error} - Throws an error if the transaction log update fails or if an issue occurs during the transfer process.
+     */
+    router.post('/transfer', authenticateRequest, validateRequest, getRequestDetails, async function (req: any, res, next) {
+        // Extracts the ServiceProvider instance from the request.
+        let serviceProvider: Service = req.serviceProvider;
+
+        // Inserts a transaction log with an INFO level for monitoring purposes.
+        await insertTransactionLog(req, LOG_LEVELS.INFO);
+
+        // Checks if the ServiceProvider requires a callback for payout transactions.
+        if (serviceProvider.requestWithPayoutCallback()) {
+            // Performs the transfer with a callback, handling the transaction asynchronously.
+            await serviceProvider.transfer(req, async function (response) {
+                // Updates the transaction log with the outcome of the transfer.
+                await updateTransactionLog(req, response);
+
+                // Sends the transfer response to the client, provided no headers have been sent already.
+                if (!res.headersSent) {
+                    res.status(response.code).json(response);
+                }
+            });
+        } else {
+            // Performs the transfer synchronously without a callback.
+            let response = await serviceProvider.transfer(req);
+
+            // Updates the transaction log with the outcome of the transfer.
+            await updateTransactionLog(req, response);
+
+            // Sends the transfer response to the client, provided no headers have been sent already.
+            if (!res.headersSent) {
+                res.status(response.code).json(response);
+            }
+        }
+    }),
+
+
 )
 
 module.exports = router

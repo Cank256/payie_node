@@ -319,19 +319,20 @@ export default class MtnMomo extends Service {
                     // Check if the request was successful.
                     if (response.status == STATUS_CODES.OK || response.status == STATUS_CODES.ACCEPTED ) {
                         try {
-                            let transaction = await collection.findOne({
+                            
+                            await collection.updateOne({
                                 reference: gatewayRef,
-                            })
-
-                            await collection.updateOne(transaction, {
+                            }, {
                                 $set: {
                                     status: TRANS_STATUS.COMPLETED,
                                     completed_at: new Date(),
                                     completed_by: 'REQUEST',
-                                    message:
-                                        response.status + '-' + response.statusText ||
-                                        'Transaction Request Failed. Service Provider Unreachable',
+                                    message: response.status + '-' + response.statusText,
                                 },
+                            })
+                            
+                            let transaction = await collection.findOne({
+                                reference: gatewayRef,
                             })
 
                             return callback(
@@ -410,6 +411,184 @@ export default class MtnMomo extends Service {
         } else {
             // Return the access token request response in case of failure.
             return callback(accessTokenRequest)
+        }
+    }
+
+    /**
+     * Asynchronously processes a transfer request and executes a callback with the response.
+     * 
+     * @async
+     * @function
+     * @param {any} req - The request object containing transfer details.
+     * @param {Function} callback - A callback function to handle the response.
+     * @returns {Promise<IResponse>} A promise that resolves to a response object.
+     */
+    async transfer(req: any, callback): Promise<IResponse> {
+        let gatewayRef = req.gatewayRef;
+
+        let details = req.details;
+        let msisdn = details.msisdn;
+        let amount = details.amount;
+        let currency = details.currency || "UGX";
+        let pyRef = details.pyRef;
+
+        let description = details.description || 'CankPay Transfers.';
+
+        if (!msisdn) {
+            return callback(createResponse(STATUS_CODES.BAD_REQUEST,
+                {
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                }, 'missing msisdn.'
+            ));
+        }
+
+        if (!amount) {
+            return callback(createResponse(STATUS_CODES.BAD_REQUEST,
+                {
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                }, 'missing amount.'
+            ));
+        }
+
+        let parameters = {
+            amount: amount.toString(),
+            currency,
+            externalId: gatewayRef,
+            payee: {
+                partyIdType: "MSISDN",
+                partyId: msisdn
+            },
+            payerMessage: description.substr(0, 140),
+            payeeNote: description.substr(0, 140)
+        };
+        
+        let referenceId = uuidv4();
+        let requestUrl = MtnMomo.stripTrailingSlash(this.disbursementUrl) + "/v1_0/transfer";
+        let accessTokenRequest: IResponse = await this.getAccessToken(TRANS_TYPES.PAYOUT);
+
+        if (accessTokenRequest.code == STATUS_CODES.OK) {
+            try {
+                let collection = db.get().collection(process.env.DB_MOMO_IPS_COLLECTION);
+                await collection.insertOne({
+                    reference: gatewayRef,
+                    py_ref: pyRef,
+                    msisdn,
+                    amount,
+                    status: TRANS_STATUS.PENDING,
+                    type: TRANS_TYPES.PAYOUT,
+                    x_reference_id: referenceId,
+                    provider_transaction_id: null,
+                    message: "Transaction Initiated",
+                    created_at: new Date(),
+                    callback_received: false,
+                    completed_by: null,
+                    completed_at: null,
+                    callback_time: null,
+                    meta: {},
+                });
+
+                await fetch(requestUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(parameters),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessTokenRequest.data.access_token}`,
+                        'X-Reference-Id': referenceId,
+                        'X-Target-Environment': this.provider_env || 'sandbox',
+                        'Ocp-Apim-Subscription-Key': this.payoutSubscriptionKey,
+                        // 'X-Callback-Url': this.providerCallbackUrl
+                    },
+                    agent
+                }).then(async (response) => {
+                    // Check if the request was successful.
+                    if (response.status == STATUS_CODES.OK || response.status == STATUS_CODES.ACCEPTED ) {
+                        try {
+                            
+                            await collection.updateOne({
+                                reference: gatewayRef,
+                            }, {
+                                $set: {
+                                    status: TRANS_STATUS.COMPLETED,
+                                    completed_at: new Date(),
+                                    completed_by: 'REQUEST',
+                                    message: response.status + '-' + response.statusText,
+                                },
+                            })
+                            
+                            let transaction = await collection.findOne({
+                                reference: gatewayRef,
+                            })
+
+                            return callback(
+                                createResponse(STATUS_CODES.OK, {
+                                    msisdn,
+                                    amount,
+                                    message: 'Transaction successfully completed.',
+                                    status: transaction.status,
+                                    provider_id: transaction.provider_transaction_id,
+                                    gateway_ref: gatewayRef,
+                                    py_ref: pyRef,
+                                }),
+                            )
+                            
+                        } catch (e) {
+                            // Log any errors that occur during the process.
+                            await insertMessageLog(
+                                req,
+                                LOG_LEVELS.DEBUG,
+                                e.message,
+                            )
+                        }
+                    } else {
+                        // Log the error and update the transaction status in the database.
+                        await insertMessageLog(
+                            req,
+                            LOG_LEVELS.DEBUG,
+                            response.status + '-' + response.statusText,
+                        )
+
+                        // Query the record and edit it in case of an error.
+                        let record = await collection.findOne({
+                            reference: gatewayRef,
+                        })
+
+                        await collection.updateOne(record, {
+                            $set: {
+                                status: TRANS_STATUS.FAILED,
+                                completed_at: new Date(),
+                                completed_by: 'REQUEST',
+                                message: response.statusText ||
+                                    'Transaction Request Failed.',
+                            },
+                        })
+
+                        return callback(
+                            createResponse(
+                                STATUS_CODES.UNPROCESSABLE_ENTITY,
+                                {
+                                    msisdn,
+                                    amount,
+                                    message: record.message,
+                                    status: record.status,
+                                    gateway_ref: gatewayRef,
+                                    py_ref: pyRef,
+                                },
+                            ),
+                        )
+                    }
+                });
+            } catch (e) {
+                await insertMessageLog(req, LOG_LEVELS.DEBUG, e.message);
+                return callback(createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                }, e.message));
+            }
+        }
+        else {
+            return callback(accessTokenRequest);
         }
     }
 }
