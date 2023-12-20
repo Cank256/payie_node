@@ -246,6 +246,56 @@ router.post(
         }
     }),
 
+    /**
+     * Handle POST requests to '/check-transaction-status'.
+     * This route initiates a transaction status check using the configured service provider.
+     * It supports both synchronous and asynchronous handling of the transaction status check,
+     * based on the service provider's capabilities.
+     * 
+     * @name POST/check-transaction-status
+     * @function
+     * @memberof transactionStatusRouter
+     * @async
+     * @param {Object} req - The request object, containing transaction details and service provider information.
+     * @param {Object} res - The response object used to send back the transaction status.
+     * @param {function} next - The next middleware function in the stack.
+     * @returns {Promise<void>} - The response is sent to the client indicating the transaction status.
+     * @throws {Error} - Throws an error if the transaction log update fails or if an issue occurs during the status check process.
+     */
+    router.get('/transaction/status', authenticateRequest, validateRequest, getRequestDetails, async function (req: any, res, next) {
+        // Extracts the ServiceProvider instance from the request.
+        let serviceProvider: Service = req.serviceProvider;
+
+        // Inserts a transaction log with an INFO level for monitoring purposes.
+        await insertTransactionLog(req, LOG_LEVELS.INFO);
+
+        // Checks if the ServiceProvider requires a callback for transaction status check.
+        if (serviceProvider.requestWithCallback()) {
+            // Performs the transaction status check with a callback, handling it asynchronously.
+            await serviceProvider.checkTransactionStatus(req, async function (response) {
+                // Updates the transaction log with the outcome of the status check.
+                await updateTransactionLog(req, response);
+
+                // Sends the transaction status response to the client, provided no headers have been sent already.
+                if (!res.headersSent) {
+                    res.status(response.code).json(response);
+                }
+            });
+        } else {
+            // Performs the transaction status check synchronously without a callback.
+            let response = await serviceProvider.checkTransactionStatus(req);
+
+            // Updates the transaction log with the outcome of the status check.
+            await updateTransactionLog(req, response);
+
+            // Sends the transaction status response to the client, provided no headers have been sent already.
+            if (!res.headersSent) {
+                res.status(response.code).json(response);
+            }
+        }
+    }),
+
+
 
 )
 

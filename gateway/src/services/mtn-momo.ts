@@ -591,4 +591,223 @@ export default class MtnMomo extends Service {
             return callback(accessTokenRequest);
         }
     }
+
+    /**
+     * Asynchronously checks the status of a transaction.
+     * This function retrieves the transaction details from the database and performs 
+     * various checks based on the transaction's current status.
+     * If necessary, it calls another function to confirm the transaction status with 
+     * an external system (MTN in this case).
+     *
+     * @async
+     * @param {Object} req - The request object containing transaction details.
+     * @param {Function} callback - A callback function to return the response.
+     * @returns {Promise<IResponse>} - A promise resolving to a response object indicating the transaction status.
+     * @throws {Error} - Throws an error if the transaction status cannot be determined or updated.
+     */
+    async checkTransactionStatus(req: any, callback): Promise<IResponse> {
+        let gatewayRef = req.gatewayRef;
+        let details = req.details;
+        let pyRef = details.pyRef;
+        let id = details.id;
+
+        if (!id) {
+            return callback(createResponse(STATUS_CODES.BAD_REQUEST,
+                {
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                }, 'Missing transaction id'
+            ));
+        }
+
+        let collection = db.get().collection(process.env.DB_MOMO_IPS_COLLECTION);
+        let notification = await collection.findOne({reference: id});
+
+        if (!notification) {
+            return callback(createResponse(STATUS_CODES.BAD_REQUEST,
+                {
+                    message: "Transaction with id " + id + " not found.",
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                }
+            ));
+        }
+
+        if (notification.status == "SUCCESSFUL") {
+            return callback(createResponse(STATUS_CODES.OK,
+                {
+                    msisdn: notification.msisdn,
+                    amount: notification.amount,
+                    message: 'Transaction successfully completed.',
+                    status: notification.status,
+                    network_id: notification.provider_transaction_id,
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                }
+            ));
+        }
+        else if (notification.status == TRANS_STATUS.FAILED || notification.status == TRANS_STATUS.CANCELLED) {
+            return callback(
+                createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
+                    msisdn: notification.msisdn,
+                    amount: notification.amount,
+                    message: notification.message,
+                    status: notification.status,
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef
+                }, notification.message)
+            );
+        }
+
+        let x_reference_id = notification.x_reference_id;
+        /*do the transaction check at MTN*/
+        let verification: IResponse = await this.confirmTransactionStatus(x_reference_id, notification.type);
+        if (verification) {
+            if (verification.code == STATUS_CODES.OK) {
+                /*update the transaction and respond*/
+                let processorRef = verification.data.hasOwnProperty('financialTransactionId') ? verification.data.financialTransactionId : null;
+                await collection.updateOne(notification, {
+                    $set: {
+                        status: verification.data.status,
+                        provider_transaction_id: processorRef,
+                        meta: verification.data,
+                        message: "Transaction Completed Successfully",
+                        completed_at: new Date(),
+                        completed_by: "TRANS_CHECK"
+                    }
+                });
+
+                return callback(
+                    createResponse(STATUS_CODES.OK, {
+                        status: verification.data.status,
+                        msisdn: notification.msisdn,
+                        amount: notification.amount,
+                        currency: notification.currency,
+                        network_id: processorRef,
+                        gateway_ref: gatewayRef,
+                        py_ref: pyRef,
+                        message: 'Transaction successfully completed.',
+                    })
+                );
+            }
+            else {
+                /*get the status, update the transaction and respond*/
+                let status = TRANS_STATUS.PENDING;
+                let message = "Transaction still in progress";
+                let statusCode = STATUS_CODES.HTTP_GATEWAY_TIMEOUT;
+
+                if (verification.data) {
+                    let verif_trans_status = verification.data["status"].toLowerCase();
+                    if (verif_trans_status.indexOf("cancelled") >= 0) {
+                        status = TRANS_STATUS.CANCELLED;
+                        message = "Transaction Cancelled";
+                        statusCode = STATUS_CODES.INTERNAL_SERVER_ERROR;
+                    }
+                    else if (verif_trans_status.indexOf("pending") >= 0 || verif_trans_status.indexOf("progress") >= 0) {
+                        status = TRANS_STATUS.PENDING;
+                        message = "Transaction still in progress";
+                    }
+                    else {
+                        status = verification.data["status"];
+                        message = verification.data["status"];
+                        statusCode = verification.code;
+                    }
+                }
+
+                await collection.updateOne(notification, {
+                    $set: {
+                        status,
+                        meta: verification.data,
+                        message,
+                        completed_at: new Date(),
+                        completed_by: "TRANS_CHECK"
+                    }
+                });
+
+                return callback(
+                    createResponse(statusCode, {
+                        status,
+                        msisdn: notification.msisdn,
+                        amount: notification.amount,
+                        currency: notification.currency,
+                        gateway_ref: gatewayRef,
+                        py_ref: pyRef,
+                        message
+                    }, message)
+                );
+            }
+        }
+        else {
+            return callback(
+                createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
+                    status: notification.status,
+                    amount: notification.amount,
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                    message: "Transaction Verification Failed. System Exception!"
+                }, "Transaction Verification Failed. System Exception!")
+            );
+        }
+
+    }
+
+    /**
+     * Confirms the status of a transaction with MTN Momo service.
+     * It makes an API call to MTN Momo and returns the transaction status.
+     *
+     * @async
+     * @function confirmTransactionStatus
+     * @param {string} reference - The external reference ID for the transaction.
+     * @param {string} transType - The type of transaction (e.g., COLLECTION, PAYOUT).
+     * @returns {Promise<IResponse>} - A promise that resolves to the response from the external service.
+     * @throws {Error} - Throws an error if the external service call fails.
+     */
+    async confirmTransactionStatus(reference: string, transType: string): Promise<IResponse> {
+        let subscriptionKey = transType.toLowerCase() == TRANS_TYPES.COLLECTION ? this.collectionSubscriptionKey : this.payoutSubscriptionKey;
+        let requestUrl = transType.toLowerCase() == TRANS_TYPES.COLLECTION ? `${this.collectionUrl}/v1_0/requesttopay/${reference}` : `${this.disbursementUrl}/v1_0/transfer/${reference}`;
+
+        let accessTokenRequest: IResponse = await this.getAccessToken(transType);
+
+        if (accessTokenRequest.code == STATUS_CODES.OK) {
+            try {
+                return fetch(requestUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessTokenRequest.data.access_token}`,
+                        'X-Target-Environment': this.provider_env || 'sandbox',
+                        'Ocp-Apim-Subscription-Key': subscriptionKey
+                    },
+                    agent
+                }).then(async (response) => {
+                    let data = await response.json().then((data) => data);
+
+                    if (response.ok) {
+                        /*check for certain values in the data object*/
+                        if (data.hasOwnProperty('status') && data.hasOwnProperty('financialTransactionId')) {
+                            if (data.status.toUpperCase() == "SUCCESSFUL") {
+                                return createResponse(STATUS_CODES.OK, data);
+                            }
+                            else {
+                                return createResponse(STATUS_CODES.UNPROCESSABLE_ENTITY, data, "Transaction Check Incomplete. Missing Response Data");
+                            }
+                        }
+                        else {
+                            return createResponse(STATUS_CODES.UNPROCESSABLE_ENTITY, data, "Transaction Check Incomplete. Missing Response Data");
+                        }
+
+                    } else {
+                        return createResponse(STATUS_CODES.UNPROCESSABLE_ENTITY, {}, response.statusText);
+                    }
+                }).catch((err) => {
+                    return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}, "");
+                });
+            } catch (e) {
+                return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}, e.message);
+            }
+        }
+        else {
+            return accessTokenRequest;
+        }
+    }
 }
