@@ -249,7 +249,7 @@ export default class MtnMomo extends Service {
 
         // Set default description if not provided.
         let description = details.description || 'Payie Collection'
-        
+
         // Prepare parameters for the collection request.
         let parameters = {
             amount: amount.toString(),
@@ -312,25 +312,34 @@ export default class MtnMomo extends Service {
                         Authorization: `Bearer ${accessTokenRequest.data.access_token}`,
                         'X-Reference-Id': referenceId,
                         'X-Target-Environment': this.provider_env || 'sandbox',
-                        'Ocp-Apim-Subscription-Key': this.collectionSubscriptionKey,
+                        'Ocp-Apim-Subscription-Key':
+                            this.collectionSubscriptionKey,
                     },
                     agent,
                 }).then(async (response) => {
                     // Check if the request was successful.
-                    if (response.status == STATUS_CODES.OK || response.status == STATUS_CODES.ACCEPTED ) {
+                    if (
+                        response.status == STATUS_CODES.OK ||
+                        response.status == STATUS_CODES.ACCEPTED
+                    ) {
                         try {
-                            
-                            await collection.updateOne({
-                                reference: gatewayRef,
-                            }, {
-                                $set: {
-                                    status: TRANS_STATUS.COMPLETED,
-                                    completed_at: new Date(),
-                                    completed_by: 'REQUEST',
-                                    message: response.status + '-' + response.statusText,
+                            await collection.updateOne(
+                                {
+                                    reference: gatewayRef,
                                 },
-                            })
-                            
+                                {
+                                    $set: {
+                                        status: TRANS_STATUS.COMPLETED,
+                                        completed_at: new Date(),
+                                        completed_by: 'REQUEST',
+                                        message:
+                                            response.status +
+                                            '-' +
+                                            response.statusText,
+                                    },
+                                },
+                            )
+
                             let transaction = await collection.findOne({
                                 reference: gatewayRef,
                             })
@@ -339,14 +348,15 @@ export default class MtnMomo extends Service {
                                 createResponse(STATUS_CODES.OK, {
                                     msisdn,
                                     amount,
-                                    message: 'Transaction successfully completed.',
+                                    message:
+                                        'Transaction successfully completed.',
                                     status: transaction.status,
-                                    provider_id: transaction.provider_transaction_id,
+                                    provider_id:
+                                        transaction.provider_transaction_id,
                                     gateway_ref: gatewayRef,
                                     py_ref: pyRef,
                                 }),
                             )
-                            
                         } catch (e) {
                             // Log any errors that occur during the process.
                             await insertMessageLog(
@@ -373,23 +383,21 @@ export default class MtnMomo extends Service {
                                 status: TRANS_STATUS.FAILED,
                                 completed_at: new Date(),
                                 completed_by: 'REQUEST',
-                                message: response.statusText ||
+                                message:
+                                    response.statusText ||
                                     'Transaction Request Failed.',
                             },
                         })
 
                         return callback(
-                            createResponse(
-                                STATUS_CODES.UNPROCESSABLE_ENTITY,
-                                {
-                                    msisdn,
-                                    amount,
-                                    message: record.message,
-                                    status: record.status,
-                                    gateway_ref: gatewayRef,
-                                    py_ref: pyRef,
-                                },
-                            ),
+                            createResponse(STATUS_CODES.UNPROCESSABLE_ENTITY, {
+                                msisdn,
+                                amount,
+                                message: record.message,
+                                status: record.status,
+                                gateway_ref: gatewayRef,
+                                py_ref: pyRef,
+                            }),
                         )
                     }
                 })
@@ -416,7 +424,7 @@ export default class MtnMomo extends Service {
 
     /**
      * Asynchronously processes a transfer request and executes a callback with the response.
-     * 
+     *
      * @async
      * @function
      * @param {any} req - The request object containing transfer details.
@@ -424,32 +432,40 @@ export default class MtnMomo extends Service {
      * @returns {Promise<IResponse>} A promise that resolves to a response object.
      */
     async transfer(req: any, callback): Promise<IResponse> {
-        let gatewayRef = req.gatewayRef;
+        let gatewayRef = req.gatewayRef
 
-        let details = req.details;
-        let msisdn = details.msisdn;
-        let amount = details.amount;
-        let currency = details.currency || "UGX";
-        let pyRef = details.pyRef;
+        let details = req.details
+        let msisdn = details.msisdn
+        let amount = details.amount
+        let currency = details.currency || 'UGX'
+        let pyRef = details.pyRef
 
-        let description = details.description || 'CankPay Transfers.';
+        let description = details.description || 'CankPay Transfers.'
 
         if (!msisdn) {
-            return callback(createResponse(STATUS_CODES.BAD_REQUEST,
-                {
-                    gateway_ref: gatewayRef,
-                    py_ref: pyRef,
-                }, 'missing msisdn.'
-            ));
+            return callback(
+                createResponse(
+                    STATUS_CODES.BAD_REQUEST,
+                    {
+                        gateway_ref: gatewayRef,
+                        py_ref: pyRef,
+                    },
+                    'missing msisdn.',
+                ),
+            )
         }
 
         if (!amount) {
-            return callback(createResponse(STATUS_CODES.BAD_REQUEST,
-                {
-                    gateway_ref: gatewayRef,
-                    py_ref: pyRef,
-                }, 'missing amount.'
-            ));
+            return callback(
+                createResponse(
+                    STATUS_CODES.BAD_REQUEST,
+                    {
+                        gateway_ref: gatewayRef,
+                        py_ref: pyRef,
+                    },
+                    'missing amount.',
+                ),
+            )
         }
 
         let parameters = {
@@ -457,20 +473,25 @@ export default class MtnMomo extends Service {
             currency,
             externalId: gatewayRef,
             payee: {
-                partyIdType: "MSISDN",
-                partyId: msisdn
+                partyIdType: 'MSISDN',
+                partyId: msisdn,
             },
             payerMessage: description.substr(0, 140),
-            payeeNote: description.substr(0, 140)
-        };
-        
-        let referenceId = uuidv4();
-        let requestUrl = MtnMomo.stripTrailingSlash(this.disbursementUrl) + "/v1_0/transfer";
-        let accessTokenRequest: IResponse = await this.getAccessToken(TRANS_TYPES.PAYOUT);
+            payeeNote: description.substr(0, 140),
+        }
+
+        let referenceId = uuidv4()
+        let requestUrl =
+            MtnMomo.stripTrailingSlash(this.disbursementUrl) + '/v1_0/transfer'
+        let accessTokenRequest: IResponse = await this.getAccessToken(
+            TRANS_TYPES.PAYOUT,
+        )
 
         if (accessTokenRequest.code == STATUS_CODES.OK) {
             try {
-                let collection = db.get().collection(process.env.DB_MOMO_IPS_COLLECTION);
+                let collection = db
+                    .get()
+                    .collection(process.env.DB_MOMO_IPS_COLLECTION)
                 await collection.insertOne({
                     reference: gatewayRef,
                     py_ref: pyRef,
@@ -480,43 +501,51 @@ export default class MtnMomo extends Service {
                     type: TRANS_TYPES.PAYOUT,
                     x_reference_id: referenceId,
                     provider_transaction_id: null,
-                    message: "Transaction Initiated",
+                    message: 'Transaction Initiated',
                     created_at: new Date(),
                     callback_received: false,
                     completed_by: null,
                     completed_at: null,
                     callback_time: null,
                     meta: {},
-                });
+                })
 
                 await fetch(requestUrl, {
                     method: 'POST',
                     body: JSON.stringify(parameters),
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessTokenRequest.data.access_token}`,
+                        Authorization: `Bearer ${accessTokenRequest.data.access_token}`,
                         'X-Reference-Id': referenceId,
                         'X-Target-Environment': this.provider_env || 'sandbox',
                         'Ocp-Apim-Subscription-Key': this.payoutSubscriptionKey,
                         // 'X-Callback-Url': this.providerCallbackUrl
                     },
-                    agent
+                    agent,
                 }).then(async (response) => {
                     // Check if the request was successful.
-                    if (response.status == STATUS_CODES.OK || response.status == STATUS_CODES.ACCEPTED ) {
+                    if (
+                        response.status == STATUS_CODES.OK ||
+                        response.status == STATUS_CODES.ACCEPTED
+                    ) {
                         try {
-                            
-                            await collection.updateOne({
-                                reference: gatewayRef,
-                            }, {
-                                $set: {
-                                    status: TRANS_STATUS.COMPLETED,
-                                    completed_at: new Date(),
-                                    completed_by: 'REQUEST',
-                                    message: response.status + '-' + response.statusText,
+                            await collection.updateOne(
+                                {
+                                    reference: gatewayRef,
                                 },
-                            })
-                            
+                                {
+                                    $set: {
+                                        status: TRANS_STATUS.COMPLETED,
+                                        completed_at: new Date(),
+                                        completed_by: 'REQUEST',
+                                        message:
+                                            response.status +
+                                            '-' +
+                                            response.statusText,
+                                    },
+                                },
+                            )
+
                             let transaction = await collection.findOne({
                                 reference: gatewayRef,
                             })
@@ -525,14 +554,15 @@ export default class MtnMomo extends Service {
                                 createResponse(STATUS_CODES.OK, {
                                     msisdn,
                                     amount,
-                                    message: 'Transaction successfully completed.',
+                                    message:
+                                        'Transaction successfully completed.',
                                     status: transaction.status,
-                                    provider_id: transaction.provider_transaction_id,
+                                    provider_id:
+                                        transaction.provider_transaction_id,
                                     gateway_ref: gatewayRef,
                                     py_ref: pyRef,
                                 }),
                             )
-                            
                         } catch (e) {
                             // Log any errors that occur during the process.
                             await insertMessageLog(
@@ -559,44 +589,47 @@ export default class MtnMomo extends Service {
                                 status: TRANS_STATUS.FAILED,
                                 completed_at: new Date(),
                                 completed_by: 'REQUEST',
-                                message: response.statusText ||
+                                message:
+                                    response.statusText ||
                                     'Transaction Request Failed.',
                             },
                         })
 
                         return callback(
-                            createResponse(
-                                STATUS_CODES.UNPROCESSABLE_ENTITY,
-                                {
-                                    msisdn,
-                                    amount,
-                                    message: record.message,
-                                    status: record.status,
-                                    gateway_ref: gatewayRef,
-                                    py_ref: pyRef,
-                                },
-                            ),
+                            createResponse(STATUS_CODES.UNPROCESSABLE_ENTITY, {
+                                msisdn,
+                                amount,
+                                message: record.message,
+                                status: record.status,
+                                gateway_ref: gatewayRef,
+                                py_ref: pyRef,
+                            }),
                         )
                     }
-                });
+                })
             } catch (e) {
-                await insertMessageLog(req, LOG_LEVELS.DEBUG, e.message);
-                return callback(createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
-                    gateway_ref: gatewayRef,
-                    py_ref: pyRef,
-                }, e.message));
+                await insertMessageLog(req, LOG_LEVELS.DEBUG, e.message)
+                return callback(
+                    createResponse(
+                        STATUS_CODES.INTERNAL_SERVER_ERROR,
+                        {
+                            gateway_ref: gatewayRef,
+                            py_ref: pyRef,
+                        },
+                        e.message,
+                    ),
+                )
             }
-        }
-        else {
-            return callback(accessTokenRequest);
+        } else {
+            return callback(accessTokenRequest)
         }
     }
 
     /**
      * Asynchronously checks the status of a transaction.
-     * This function retrieves the transaction details from the database and performs 
+     * This function retrieves the transaction details from the database and performs
      * various checks based on the transaction's current status.
-     * If necessary, it calls another function to confirm the transaction status with 
+     * If necessary, it calls another function to confirm the transaction status with
      * an external system (MTN in this case).
      *
      * @async
@@ -606,36 +639,40 @@ export default class MtnMomo extends Service {
      * @throws {Error} - Throws an error if the transaction status cannot be determined or updated.
      */
     async checkTransactionStatus(req: any, callback): Promise<IResponse> {
-        let gatewayRef = req.gatewayRef;
-        let details = req.details;
-        let pyRef = details.pyRef;
-        let id = details.id;
+        let gatewayRef = req.gatewayRef
+        let details = req.details
+        let pyRef = details.pyRef
+        let id = details.id
 
         if (!id) {
-            return callback(createResponse(STATUS_CODES.BAD_REQUEST,
-                {
-                    gateway_ref: gatewayRef,
-                    py_ref: pyRef,
-                }, 'Missing transaction id'
-            ));
+            return callback(
+                createResponse(
+                    STATUS_CODES.BAD_REQUEST,
+                    {
+                        gateway_ref: gatewayRef,
+                        py_ref: pyRef,
+                    },
+                    'Missing transaction id',
+                ),
+            )
         }
 
-        let collection = db.get().collection(process.env.DB_MOMO_IPS_COLLECTION);
-        let notification = await collection.findOne({reference: id});
+        let collection = db.get().collection(process.env.DB_MOMO_IPS_COLLECTION)
+        let notification = await collection.findOne({ reference: id })
 
         if (!notification) {
-            return callback(createResponse(STATUS_CODES.BAD_REQUEST,
-                {
-                    message: "Transaction with id " + id + " not found.",
+            return callback(
+                createResponse(STATUS_CODES.BAD_REQUEST, {
+                    message: 'Transaction with id ' + id + ' not found.',
                     gateway_ref: gatewayRef,
                     py_ref: pyRef,
-                }
-            ));
+                }),
+            )
         }
 
-        if (notification.status == "SUCCESSFUL") {
-            return callback(createResponse(STATUS_CODES.OK,
-                {
+        if (notification.status == 'SUCCESSFUL') {
+            return callback(
+                createResponse(STATUS_CODES.OK, {
                     msisdn: notification.msisdn,
                     amount: notification.amount,
                     message: 'Transaction successfully completed.',
@@ -643,39 +680,52 @@ export default class MtnMomo extends Service {
                     network_id: notification.provider_transaction_id,
                     gateway_ref: gatewayRef,
                     py_ref: pyRef,
-                }
-            ));
-        }
-        else if (notification.status == TRANS_STATUS.FAILED || notification.status == TRANS_STATUS.CANCELLED) {
+                }),
+            )
+        } else if (
+            notification.status == TRANS_STATUS.FAILED ||
+            notification.status == TRANS_STATUS.CANCELLED
+        ) {
             return callback(
-                createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
-                    msisdn: notification.msisdn,
-                    amount: notification.amount,
-                    message: notification.message,
-                    status: notification.status,
-                    gateway_ref: gatewayRef,
-                    py_ref: pyRef
-                }, notification.message)
-            );
+                createResponse(
+                    STATUS_CODES.INTERNAL_SERVER_ERROR,
+                    {
+                        msisdn: notification.msisdn,
+                        amount: notification.amount,
+                        message: notification.message,
+                        status: notification.status,
+                        gateway_ref: gatewayRef,
+                        py_ref: pyRef,
+                    },
+                    notification.message,
+                ),
+            )
         }
 
-        let x_reference_id = notification.x_reference_id;
+        let x_reference_id = notification.x_reference_id
         /*do the transaction check at MTN*/
-        let verification: IResponse = await this.confirmTransactionStatus(x_reference_id, notification.type);
+        let verification: IResponse = await this.confirmTransactionStatus(
+            x_reference_id,
+            notification.type,
+        )
         if (verification) {
             if (verification.code == STATUS_CODES.OK) {
                 /*update the transaction and respond*/
-                let processorRef = verification.data.hasOwnProperty('financialTransactionId') ? verification.data.financialTransactionId : null;
+                let processorRef = verification.data.hasOwnProperty(
+                    'financialTransactionId',
+                )
+                    ? verification.data.financialTransactionId
+                    : null
                 await collection.updateOne(notification, {
                     $set: {
                         status: verification.data.status,
                         provider_transaction_id: processorRef,
                         meta: verification.data,
-                        message: "Transaction Completed Successfully",
+                        message: 'Transaction Completed Successfully',
                         completed_at: new Date(),
-                        completed_by: "TRANS_CHECK"
-                    }
-                });
+                        completed_by: 'TRANS_CHECK',
+                    },
+                })
 
                 return callback(
                     createResponse(STATUS_CODES.OK, {
@@ -687,30 +737,31 @@ export default class MtnMomo extends Service {
                         gateway_ref: gatewayRef,
                         py_ref: pyRef,
                         message: 'Transaction successfully completed.',
-                    })
-                );
-            }
-            else {
+                    }),
+                )
+            } else {
                 /*get the status, update the transaction and respond*/
-                let status = TRANS_STATUS.PENDING;
-                let message = "Transaction still in progress";
-                let statusCode = STATUS_CODES.HTTP_GATEWAY_TIMEOUT;
+                let status = TRANS_STATUS.PENDING
+                let message = 'Transaction still in progress'
+                let statusCode = STATUS_CODES.HTTP_GATEWAY_TIMEOUT
 
                 if (verification.data) {
-                    let verif_trans_status = verification.data["status"].toLowerCase();
-                    if (verif_trans_status.indexOf("cancelled") >= 0) {
-                        status = TRANS_STATUS.CANCELLED;
-                        message = "Transaction Cancelled";
-                        statusCode = STATUS_CODES.INTERNAL_SERVER_ERROR;
-                    }
-                    else if (verif_trans_status.indexOf("pending") >= 0 || verif_trans_status.indexOf("progress") >= 0) {
-                        status = TRANS_STATUS.PENDING;
-                        message = "Transaction still in progress";
-                    }
-                    else {
-                        status = verification.data["status"];
-                        message = verification.data["status"];
-                        statusCode = verification.code;
+                    let verif_trans_status =
+                        verification.data['status'].toLowerCase()
+                    if (verif_trans_status.indexOf('cancelled') >= 0) {
+                        status = TRANS_STATUS.CANCELLED
+                        message = 'Transaction Cancelled'
+                        statusCode = STATUS_CODES.INTERNAL_SERVER_ERROR
+                    } else if (
+                        verif_trans_status.indexOf('pending') >= 0 ||
+                        verif_trans_status.indexOf('progress') >= 0
+                    ) {
+                        status = TRANS_STATUS.PENDING
+                        message = 'Transaction still in progress'
+                    } else {
+                        status = verification.data['status']
+                        message = verification.data['status']
+                        statusCode = verification.code
                     }
                 }
 
@@ -720,35 +771,42 @@ export default class MtnMomo extends Service {
                         meta: verification.data,
                         message,
                         completed_at: new Date(),
-                        completed_by: "TRANS_CHECK"
-                    }
-                });
+                        completed_by: 'TRANS_CHECK',
+                    },
+                })
 
                 return callback(
-                    createResponse(statusCode, {
-                        status,
-                        msisdn: notification.msisdn,
+                    createResponse(
+                        statusCode,
+                        {
+                            status,
+                            msisdn: notification.msisdn,
+                            amount: notification.amount,
+                            currency: notification.currency,
+                            gateway_ref: gatewayRef,
+                            py_ref: pyRef,
+                            message,
+                        },
+                        message,
+                    ),
+                )
+            }
+        } else {
+            return callback(
+                createResponse(
+                    STATUS_CODES.INTERNAL_SERVER_ERROR,
+                    {
+                        status: notification.status,
                         amount: notification.amount,
-                        currency: notification.currency,
                         gateway_ref: gatewayRef,
                         py_ref: pyRef,
-                        message
-                    }, message)
-                );
-            }
+                        message:
+                            'Transaction Verification Failed. System Exception!',
+                    },
+                    'Transaction Verification Failed. System Exception!',
+                ),
+            )
         }
-        else {
-            return callback(
-                createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
-                    status: notification.status,
-                    amount: notification.amount,
-                    gateway_ref: gatewayRef,
-                    py_ref: pyRef,
-                    message: "Transaction Verification Failed. System Exception!"
-                }, "Transaction Verification Failed. System Exception!")
-            );
-        }
-
     }
 
     /**
@@ -762,11 +820,20 @@ export default class MtnMomo extends Service {
      * @returns {Promise<IResponse>} - A promise that resolves to the response from the external service.
      * @throws {Error} - Throws an error if the external service call fails.
      */
-    async confirmTransactionStatus(reference: string, transType: string): Promise<IResponse> {
-        let subscriptionKey = transType.toLowerCase() == TRANS_TYPES.COLLECTION ? this.collectionSubscriptionKey : this.payoutSubscriptionKey;
-        let requestUrl = transType.toLowerCase() == TRANS_TYPES.COLLECTION ? `${this.collectionUrl}/v1_0/requesttopay/${reference}` : `${this.disbursementUrl}/v1_0/transfer/${reference}`;
+    async confirmTransactionStatus(
+        reference: string,
+        transType: string,
+    ): Promise<IResponse> {
+        let subscriptionKey =
+            transType.toLowerCase() == TRANS_TYPES.COLLECTION
+                ? this.collectionSubscriptionKey
+                : this.payoutSubscriptionKey
+        let requestUrl =
+            transType.toLowerCase() == TRANS_TYPES.COLLECTION
+                ? `${this.collectionUrl}/v1_0/requesttopay/${reference}`
+                : `${this.disbursementUrl}/v1_0/transfer/${reference}`
 
-        let accessTokenRequest: IResponse = await this.getAccessToken(transType);
+        let accessTokenRequest: IResponse = await this.getAccessToken(transType)
 
         if (accessTokenRequest.code == STATUS_CODES.OK) {
             try {
@@ -774,40 +841,61 @@ export default class MtnMomo extends Service {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessTokenRequest.data.access_token}`,
+                        Authorization: `Bearer ${accessTokenRequest.data.access_token}`,
                         'X-Target-Environment': this.provider_env || 'sandbox',
-                        'Ocp-Apim-Subscription-Key': subscriptionKey
+                        'Ocp-Apim-Subscription-Key': subscriptionKey,
                     },
-                    agent
-                }).then(async (response) => {
-                    let data = await response.json().then((data) => data);
+                    agent,
+                })
+                    .then(async (response) => {
+                        let data = await response.json().then((data) => data)
 
-                    if (response.ok) {
-                        /*check for certain values in the data object*/
-                        if (data.hasOwnProperty('status') && data.hasOwnProperty('financialTransactionId')) {
-                            if (data.status.toUpperCase() == "SUCCESSFUL") {
-                                return createResponse(STATUS_CODES.OK, data);
+                        if (response.ok) {
+                            /*check for certain values in the data object*/
+                            if (
+                                data.hasOwnProperty('status') &&
+                                data.hasOwnProperty('financialTransactionId')
+                            ) {
+                                if (data.status.toUpperCase() == 'SUCCESSFUL') {
+                                    return createResponse(STATUS_CODES.OK, data)
+                                } else {
+                                    return createResponse(
+                                        STATUS_CODES.UNPROCESSABLE_ENTITY,
+                                        data,
+                                        'Transaction Check Incomplete. Missing Response Data',
+                                    )
+                                }
+                            } else {
+                                return createResponse(
+                                    STATUS_CODES.UNPROCESSABLE_ENTITY,
+                                    data,
+                                    'Transaction Check Incomplete. Missing Response Data',
+                                )
                             }
-                            else {
-                                return createResponse(STATUS_CODES.UNPROCESSABLE_ENTITY, data, "Transaction Check Incomplete. Missing Response Data");
-                            }
+                        } else {
+                            return createResponse(
+                                STATUS_CODES.UNPROCESSABLE_ENTITY,
+                                {},
+                                response.statusText,
+                            )
                         }
-                        else {
-                            return createResponse(STATUS_CODES.UNPROCESSABLE_ENTITY, data, "Transaction Check Incomplete. Missing Response Data");
-                        }
-
-                    } else {
-                        return createResponse(STATUS_CODES.UNPROCESSABLE_ENTITY, {}, response.statusText);
-                    }
-                }).catch((err) => {
-                    return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}, "");
-                });
+                    })
+                    .catch((err) => {
+                        return createResponse(
+                            STATUS_CODES.INTERNAL_SERVER_ERROR,
+                            {},
+                            '',
+                        )
+                    })
             } catch (e) {
-                return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}, e.message);
+                return createResponse(
+                    STATUS_CODES.INTERNAL_SERVER_ERROR,
+                    {},
+                    e.message,
+                )
             }
-        }
-        else {
-            return accessTokenRequest;
+        } else {
+            return accessTokenRequest
         }
     }
 }

@@ -12,6 +12,7 @@ const redisClient = require('../config/redis')
 import { LOG_LEVELS, STATUS_CODES } from '../utils/constants'
 import {
     createResponse,
+    findTransaction,
     getServiceProviders,
     insertTransactionLog,
     updateTransactionLog,
@@ -22,6 +23,7 @@ import {
     validateRequest,
 } from '../middlewares'
 import { Service } from '../services/service'
+const db = require('../config/db')
 
 /**
  * Redis Cache key prefix for API routes.
@@ -202,7 +204,7 @@ router.post(
      * This route uses different middleware to authenticate the request, validate it, and
      * obtain necessary details before processing the transfer.
      * Depending on the service provider's configuration, the transfer might require a callback.
-     * 
+     *
      * @name POST/transfer
      * @function
      * @memberof transferRouter
@@ -213,45 +215,51 @@ router.post(
      * @returns {Promise<void>} - The response is sent to the client indicating the transfer result.
      * @throws {Error} - Throws an error if the transaction log update fails or if an issue occurs during the transfer process.
      */
-    router.post('/transfer', authenticateRequest, validateRequest, getRequestDetails, async function (req: any, res, next) {
-        // Extracts the ServiceProvider instance from the request.
-        let serviceProvider: Service = req.serviceProvider;
+    router.post(
+        '/transfer',
+        authenticateRequest,
+        validateRequest,
+        getRequestDetails,
+        async function (req: any, res, next) {
+            // Extracts the ServiceProvider instance from the request.
+            let serviceProvider: Service = req.serviceProvider
 
-        // Inserts a transaction log with an INFO level for monitoring purposes.
-        await insertTransactionLog(req, LOG_LEVELS.INFO);
+            // Inserts a transaction log with an INFO level for monitoring purposes.
+            await insertTransactionLog(req, LOG_LEVELS.INFO)
 
-        // Checks if the ServiceProvider requires a callback for payout transactions.
-        if (serviceProvider.requestWithPayoutCallback()) {
-            // Performs the transfer with a callback, handling the transaction asynchronously.
-            await serviceProvider.transfer(req, async function (response) {
+            // Checks if the ServiceProvider requires a callback for payout transactions.
+            if (serviceProvider.requestWithPayoutCallback()) {
+                // Performs the transfer with a callback, handling the transaction asynchronously.
+                await serviceProvider.transfer(req, async function (response) {
+                    // Updates the transaction log with the outcome of the transfer.
+                    await updateTransactionLog(req, response)
+
+                    // Sends the transfer response to the client, provided no headers have been sent already.
+                    if (!res.headersSent) {
+                        res.status(response.code).json(response)
+                    }
+                })
+            } else {
+                // Performs the transfer synchronously without a callback.
+                let response = await serviceProvider.transfer(req)
+
                 // Updates the transaction log with the outcome of the transfer.
-                await updateTransactionLog(req, response);
+                await updateTransactionLog(req, response)
 
                 // Sends the transfer response to the client, provided no headers have been sent already.
                 if (!res.headersSent) {
-                    res.status(response.code).json(response);
+                    res.status(response.code).json(response)
                 }
-            });
-        } else {
-            // Performs the transfer synchronously without a callback.
-            let response = await serviceProvider.transfer(req);
-
-            // Updates the transaction log with the outcome of the transfer.
-            await updateTransactionLog(req, response);
-
-            // Sends the transfer response to the client, provided no headers have been sent already.
-            if (!res.headersSent) {
-                res.status(response.code).json(response);
             }
-        }
-    }),
+        },
+    ),
 
     /**
      * Handle POST requests to '/check-transaction-status'.
      * This route initiates a transaction status check using the configured service provider.
      * It supports both synchronous and asynchronous handling of the transaction status check,
      * based on the service provider's capabilities.
-     * 
+     *
      * @name POST/check-transaction-status
      * @function
      * @memberof transactionStatusRouter
@@ -262,41 +270,103 @@ router.post(
      * @returns {Promise<void>} - The response is sent to the client indicating the transaction status.
      * @throws {Error} - Throws an error if the transaction log update fails or if an issue occurs during the status check process.
      */
-    router.get('/transaction/status', authenticateRequest, validateRequest, getRequestDetails, async function (req: any, res, next) {
-        // Extracts the ServiceProvider instance from the request.
-        let serviceProvider: Service = req.serviceProvider;
+    router.get(
+        '/transaction/status',
+        authenticateRequest,
+        validateRequest,
+        getRequestDetails,
+        async function (req: any, res, next) {
+            // Extracts the ServiceProvider instance from the request.
+            let serviceProvider: Service = req.serviceProvider
 
-        // Inserts a transaction log with an INFO level for monitoring purposes.
-        await insertTransactionLog(req, LOG_LEVELS.INFO);
+            // Inserts a transaction log with an INFO level for monitoring purposes.
+            await insertTransactionLog(req, LOG_LEVELS.INFO)
 
-        // Checks if the ServiceProvider requires a callback for transaction status check.
-        if (serviceProvider.requestWithCallback()) {
-            // Performs the transaction status check with a callback, handling it asynchronously.
-            await serviceProvider.checkTransactionStatus(req, async function (response) {
+            // Checks if the ServiceProvider requires a callback for transaction status check.
+            if (serviceProvider.requestWithCallback()) {
+                // Performs the transaction status check with a callback, handling it asynchronously.
+                await serviceProvider.checkTransactionStatus(
+                    req,
+                    async function (response) {
+                        // Updates the transaction log with the outcome of the status check.
+                        await updateTransactionLog(req, response)
+
+                        // Sends the transaction status response to the client, provided no headers have been sent already.
+                        if (!res.headersSent) {
+                            res.status(response.code).json(response)
+                        }
+                    },
+                )
+            } else {
+                // Performs the transaction status check synchronously without a callback.
+                let response = await serviceProvider.checkTransactionStatus(req)
+
                 // Updates the transaction log with the outcome of the status check.
-                await updateTransactionLog(req, response);
+                await updateTransactionLog(req, response)
 
                 // Sends the transaction status response to the client, provided no headers have been sent already.
                 if (!res.headersSent) {
-                    res.status(response.code).json(response);
+                    res.status(response.code).json(response)
                 }
-            });
-        } else {
-            // Performs the transaction status check synchronously without a callback.
-            let response = await serviceProvider.checkTransactionStatus(req);
-
-            // Updates the transaction log with the outcome of the status check.
-            await updateTransactionLog(req, response);
-
-            // Sends the transaction status response to the client, provided no headers have been sent already.
-            if (!res.headersSent) {
-                res.status(response.code).json(response);
             }
-        }
-    }),
+        },
+    ),
 
+    /**
+     * Handle GET requests to '/transaction'.
+     * Retrieves transaction details based on the provided transaction ID.
+     * This route is protected by API authentication middleware.
+     *
+     * @name GET/transaction
+     * @function
+     * @memberof transactionRouter
+     * @async
+     * @param {Object} req - The request object, containing query parameters including the transaction ID.
+     * @param {Object} res - The response object used to send back the transaction details.
+     * @returns {Promise<void>} - The response is sent to the client with the transaction details or an error message.
+     * @throws {Error} - Throws an error if the transaction retrieval process fails.
+     */
+    router.get(
+        '/transaction',
+        authenticateRequest,
+        async function (req: any, res) {
+            // Extracting the transaction ID from the request query parameters.
+            let id = req.query.id
 
+            // Accessing the transactions collection from the database.
+            let collection = db
+                .get()
+                .collection(process.env.DB_TRANSACTIONS_COLLECTION)
 
+            // Preparing the search criteria.
+            let whereSearch = {}
+
+            // Validating the presence of the transaction ID.
+            if (id != '' && id != null) {
+                whereSearch = { gatewayRef: id }
+            } else {
+                // Creating a response for missing transaction ID and sending it.
+                let response = createResponse(
+                    STATUS_CODES.BAD_REQUEST,
+                    {},
+                    'Transaction ID parameter is missing.',
+                )
+                res.status(response.code).json(response)
+                return
+            }
+
+            // Retrieving the transaction from the database.
+            let result = await findTransaction(collection, whereSearch)
+
+            // Creating a response with the transaction result.
+            let response = createResponse(STATUS_CODES.OK, result[0])
+
+            // Sending the response if headers have not been sent already.
+            if (!res.headersSent) {
+                res.status(response.code).json(response)
+            }
+        },
+    ),
 )
 
 module.exports = router

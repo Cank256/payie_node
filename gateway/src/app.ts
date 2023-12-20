@@ -10,7 +10,7 @@ const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
 const bodyParser = require('body-parser')
 const timeout = require('express-timeout-handler')
-const uniqid = require('uniqid');
+const uniqid = require('uniqid')
 let router = require('./config/router')
 
 /**
@@ -90,12 +90,11 @@ app.use(timeout.handler(timeoutOptions))
  */
 app.use(function (req: any, res, next) {
     // Generate a unique identifier using the uniqid library
-    req.gatewayRef = uniqid();
+    req.gatewayRef = uniqid()
 
     // Call the next middleware or route handler
-    next();
-});
-
+    next()
+})
 
 /**
  * Configure and apply the routing middleware.

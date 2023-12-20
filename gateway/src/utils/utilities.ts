@@ -339,3 +339,28 @@ export async function updateLogByExternalRef(
         console.log(err.message)
     }
 }
+
+/**
+ * Asynchronously finds transactions in a given collection based on search criteria.
+ * This function searches the MongoDB collection and returns an array of matching transactions.
+ * If no transactions match the criteria, it returns an empty array.
+ *
+ * @async
+ * @function findTransaction
+ * @param {Collection} collection - The MongoDB collection to search in.
+ * @param {Object} whereSearch - The search criteria used to find transactions.
+ * @returns {Promise<any>} - A promise that resolves to an array of found transactions.
+ * @throws {Error} - Logs an error message to the console if the search operation fails.
+ */
+export async function findTransaction(collection, whereSearch): Promise<any> {
+    try {
+        // Performing the search in the provided collection using the given criteria.
+        let getTransaction = await collection.find(whereSearch).toArray()
+
+        // Resolves with an array of found transactions.
+        return await Promise.all(getTransaction)
+    } catch (err) {
+        // Logging the error message to the console if the search operation fails.
+        console.log(err.message)
+    }
+}
