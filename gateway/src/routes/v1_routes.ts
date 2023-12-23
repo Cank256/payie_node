@@ -425,6 +425,53 @@ router.post(
         }
     }),
 
+    /**
+     * GET endpoint to retrieve message log data with optional filtering.
+     *
+     * @param {Object} req - Express request object.
+     * @param {Object} res - Express response object.
+     * @returns {void}
+     */
+    router.get('/messages', authenticateRequest, async function (req: any, res) {
+        // Parse query parameters or use default values
+        let size = parseInt(req.query.limit) || 30;   // Number of items to retrieve (default: 30)
+        let offset = parseInt(req.query.offset) || 0; // Offset for pagination (default: 0)
+        let search = req.query.search;                 // Search query (optional)
+        
+        // Get the MongoDB collection for messages
+        let collection = db.get().collection(process.env.DB_MESSAGES_COLLECTION);
+        
+        // Define the search criteria for filtering messages
+        let whereSearch = {};
+
+        if (search != '') {
+            // Create a regular expression pattern for case-insensitive search
+            let filter = new RegExp(search, 'i');
+            whereSearch = {
+                '$or': [
+                    {'requestBody.external_transaction_id': filter},
+                    {'requestBody.msisdn': filter},
+                    {'internalTransactionId': filter}
+                ]
+            };
+        }
+
+        // Retrieve messages from the collection with optional filtering
+        let result = await findDocuments(collection, whereSearch, offset, size);
+
+        // Create a response object with message log data
+        let response = createResponse(STATUS_CODES.OK, {
+            total_count: result[1],     // Total number of matching messages
+            limit: size,               // Number of messages per page
+            messages: result[0]        // Array of messages
+        });
+
+        // Send the response to the client
+        if (!res.headersSent) {
+            res.status(response.code).json(response);
+        }
+    })
+
 )
 
 module.exports = router
