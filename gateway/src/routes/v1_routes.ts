@@ -12,6 +12,7 @@ const redisClient = require('../config/redis')
 import { LOG_LEVELS, STATUS_CODES } from '../utils/constants'
 import {
     createResponse,
+    findDocuments,
     findTransaction,
     getServiceProviders,
     insertTransactionLog,
@@ -367,6 +368,63 @@ router.post(
             }
         },
     ),
+
+    /**
+     * GET endpoint to retrieve transaction data with optional filtering.
+     *
+     * @param {Object} req - Express request object.
+     * @param {Object} res - Express response object.
+     * @returns {void}
+     */
+    router.get('/transaction/all', authenticateRequest, async function (req: any, res) {
+        // Parse query parameters or use default values
+        let size = parseInt(req.query.limit) || 30;   // Number of items to retrieve (default: 30)
+        let offset = parseInt(req.query.offset) || 0; // Offset for pagination (default: 0)
+        let search = req.query.search;                 // Search query (optional)
+        
+        // Get the MongoDB collection for transactions
+        let collection = db.get().collection(process.env.DB_TRANSACTIONS_COLLECTION);
+        
+        // Define the search criteria for filtering transactions
+        let whereSearch = {};
+
+        if (search != '') {
+            // Create a regular expression pattern for case-insensitive search
+            let filter = new RegExp(search, 'i');
+            whereSearch = {
+                '$or': [
+                    {'requestBody.external_transaction_id': filter},
+                    {'requestBody.msisdn': filter},
+                    {'internalTransactionId': filter}
+                ]
+            };
+        }
+
+        try {
+            // Retrieve transactions from the collection with optional filtering
+            let [documents, totalDocuments] = await findDocuments(collection, whereSearch, offset, size);
+
+            // Create a response object with transaction data
+            let response = createResponse(STATUS_CODES.OK, {
+                total_count: totalDocuments, // Total number of matching transactions
+                limit: size,                // Number of transactions per page
+                transactions: documents     // Array of transactions
+            });
+
+            // Send the response to the client
+            if (!res.headersSent) {
+                res.status(response.code).json(response);
+            }
+        } catch (error) {
+            console.error(error.message);
+            // Handle the error and send an appropriate response to the client
+            let errorResponse = createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
+                error: error.message
+            });
+            res.status(errorResponse.code).json(errorResponse);
+        }
+    }),
+
 )
 
 module.exports = router

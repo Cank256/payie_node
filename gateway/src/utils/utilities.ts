@@ -364,3 +364,28 @@ export async function findTransaction(collection, whereSearch): Promise<any> {
         console.log(err.message)
     }
 }
+
+/**
+ * Find documents in a MongoDB collection with optional pagination.
+ *
+ * @param {Collection} collection - The MongoDB collection to query.
+ * @param {Object} whereSearch - The search criteria for filtering documents.
+ * @param {number} skip - The number of documents to skip (for pagination).
+ * @param {number} size - The maximum number of documents to retrieve.
+ * @returns {Promise<Array>} - A Promise that resolves to an array containing retrieved documents and total document count.
+ */
+export async function findDocuments(collection, whereSearch, skip: number, size: number): Promise<any> {
+    try {
+        // Count the total number of documents that match the search criteria
+        let getDocsCount = await collection.find(whereSearch).count();
+
+        // Retrieve documents based on the search criteria, sorting by '_id' in descending order
+        // Skip a certain number of documents for pagination and limit the number of retrieved documents
+        let getDocs = await collection.find(whereSearch).sort([['_id', -1]]).skip(skip).limit(size).toArray();
+
+        // Return an array containing retrieved documents and total document count
+        return await Promise.all([getDocs, getDocsCount]);
+    } catch (err) {
+        console.log(err.message); // Log any errors to the console
+    }
+}
