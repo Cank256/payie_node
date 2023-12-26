@@ -171,6 +171,19 @@ export abstract class Service {
     }
 
     /**
+     * Update the transaction log with a Service Provider Webhook.
+     * @async
+     * @function
+     * @name updateLogByWebhook
+     * @param {any} req - Details of the webhook request.
+     * @param {any} res - Response to return.
+     * @returns {Promise<IResponse>} - Standardized API response object.
+     */
+    async updateLogByWebhook(req: any, res: any): Promise<IResponse> {
+        return createResponse(STATUS_CODES.BAD_REQUEST)
+    }
+
+    /**
      * Checks if the service provider supports transaction callback.
      * @function
      * @name requestWithCallback

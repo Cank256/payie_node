@@ -34,3 +34,35 @@ export async function authenticateRequest(req, res, next) {
     }
     next()
 }
+
+/**
+ * Middleware to authenticate incoming requests based on API key and IP address.
+ * @function
+ * @name authenticateWebhook
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {function} next - The next middleware function.
+ * @returns {void}
+ * @memberof module:utils/response
+ */
+export async function authenticateWebhook(req, res, next) {
+    let gatewayRef = req.gatewayRef
+
+    if (
+        req.get('webhook-key') !== process.env.APP_WEBHOOK_KEY
+    ) {
+        let response = createResponse(
+            STATUS_CODES.UNAUTHORIZED,
+            { transaction_id: gatewayRef },
+            ERROR_MESSAGES.UNAUTHORIZED_ACCESS,
+        )
+        await insertTransactionLog(
+            req,
+            LOG_LEVELS.CRITICAL,
+            ERROR_MESSAGES.UNAUTHORIZED_ACCESS,
+            response,
+        )
+        return res.status(response.code).end()
+    }
+    next()
+}

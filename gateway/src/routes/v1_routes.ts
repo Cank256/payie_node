@@ -20,6 +20,7 @@ import {
 } from '../utils/utilities'
 import {
     authenticateRequest,
+    authenticateWebhook,
     getRequestDetails,
     validateRequest,
 } from '../middlewares'
@@ -470,6 +471,13 @@ router.post(
         if (!res.headersSent) {
             res.status(response.code).json(response);
         }
+    }),
+
+    router.post('/webhook', authenticateWebhook, getRequestDetails, async function (req: any, res: any, next) {
+
+        let serviceProvider: Service = req.query.provider
+    
+        await serviceProvider.updateLogByWebhook(req, res)
     })
 
 )
