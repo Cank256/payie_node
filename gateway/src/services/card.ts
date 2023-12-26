@@ -127,7 +127,6 @@ export default class Card extends Service {
             if (response.status.toUpperCase() == TRANS_STATUS.SUCCESSFUL) {
                 let data = {
                     status: TRANS_STATUS.PENDING,
-                    // orderId: orderId,
                     url: response.data.link,
                     gateway_ref: gatewayRef,
                     py_ref: pyRef,
