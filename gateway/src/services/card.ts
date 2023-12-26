@@ -8,18 +8,24 @@
  * @requires ./service
  */
 
-import { Service } from "./service";
-import { createResponse, generateCode, IConfig, insertMessageLog, IResponse } from "../utils/utilities";
-import { LOG_LEVELS, STATUS_CODES, TRANS_STATUS } from "../utils/constants";
+import { Service } from './service'
+import {
+    createResponse,
+    generateCode,
+    IConfig,
+    insertMessageLog,
+    IResponse,
+} from '../utils/utilities'
+import { LOG_LEVELS, STATUS_CODES, TRANS_STATUS } from '../utils/constants'
 const db = require('../config/db')
 
-const fetch = require('cross-fetch');
-const https = require("https");
+const fetch = require('cross-fetch')
+const https = require('https')
 
 // Configuration for the https agent, specifically set to ignore unauthorized certificates.
 const agent = new https.Agent({
-    rejectUnauthorized: false
-});
+    rejectUnauthorized: false,
+})
 
 /**
  * Class representing the Card service for handling card transactions.
@@ -27,21 +33,21 @@ const agent = new https.Agent({
  */
 export default class Card extends Service {
     // Class properties declaration
-    protected name: string;
-    protected serverUrl: string;
-    protected type: string[];
-    protected secret_key: string;
+    protected name: string
+    protected serverUrl: string
+    protected type: string[]
+    protected secret_key: string
 
     /**
      * Constructs an instance of the Card service.
      * @param {IConfig} initConfig - Configuration details for the Card service.
      */
     constructor(initConfig: IConfig) {
-        super();
-        this.name = initConfig.name;
-        this.serverUrl = initConfig.server_url;
-        this.type = initConfig.type;
-        this.secret_key = initConfig.secret_key;
+        super()
+        this.name = initConfig.name
+        this.serverUrl = initConfig.server_url
+        this.type = initConfig.type
+        this.secret_key = initConfig.secret_key
     }
 
     /**
@@ -50,7 +56,7 @@ export default class Card extends Service {
      * @returns {Promise<IResponse>} - The response object.
      */
     async validateAccount(details: any): Promise<IResponse> {
-        return createResponse(STATUS_CODES.BAD_REQUEST);
+        return createResponse(STATUS_CODES.BAD_REQUEST)
     }
 
     /**
@@ -60,7 +66,7 @@ export default class Card extends Service {
      * @returns {string} - Processed URL string without trailing slash.
      */
     static stripTrailingSlash(urlString: string): string {
-        return urlString.endsWith("/") ? urlString.slice(0, -1) : urlString;
+        return urlString.endsWith('/') ? urlString.slice(0, -1) : urlString
     }
 
     /**
@@ -70,24 +76,32 @@ export default class Card extends Service {
      */
     async collect(req: any): Promise<IResponse> {
         /*get the required parameters*/
-        let gatewayRef = req.gatewayRef;
-        let details = req.details;
-        let currency = details.currency;
-        let amount = Number.parseInt(details.amount);
-        let pyRef = details.pyRef;
+        let gatewayRef = req.gatewayRef
+        let details = req.details
+        let currency = details.currency
+        let amount = Number.parseInt(details.amount)
+        let pyRef = details.pyRef
 
         if (!currency) {
-            return createResponse(STATUS_CODES.BAD_REQUEST, {
-                gateway_ref: gatewayRef,
-                py_ref: pyRef,
-            }, 'missing currency.');
+            return createResponse(
+                STATUS_CODES.BAD_REQUEST,
+                {
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                },
+                'missing currency.',
+            )
         }
 
         if (!amount) {
-            return createResponse(STATUS_CODES.BAD_REQUEST, {
-                gateway_ref: gatewayRef,
-                py_ref: pyRef,
-            }, 'missing amount.');
+            return createResponse(
+                STATUS_CODES.BAD_REQUEST,
+                {
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                },
+                'missing amount.',
+            )
         }
 
         /*set up the request parameters*/
@@ -98,55 +112,55 @@ export default class Card extends Service {
             amount,
             currency,
             redirect_url: details.redirect_url,
-            payment_options: "card",
-            customer:{
+            payment_options: 'card',
+            customer: {
                 name: details.client_name,
                 email: details.client_email,
-                phonenumber: details.msisdn
+                phonenumber: details.msisdn,
             },
-            customizations:{
-                title: "CankPay",
-                description: "Your Swift Payments",
-                logo: ""
-            }
+            customizations: {
+                title: 'CankPay',
+                description: 'Your Swift Payments',
+                logo: '',
+            },
         }
 
-        let requestUrl = Card.stripTrailingSlash(this.serverUrl);
+        let requestUrl = Card.stripTrailingSlash(this.serverUrl)
 
         try {
-
-            let response = await fetch(requestUrl, {
+            let response = (await fetch(requestUrl, {
                 method: 'POST',
                 body: JSON.stringify(parameters),
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': "Bearer " + this.secret_key
+                    Authorization: 'Bearer ' + this.secret_key,
                 },
-                agent
-            }).then(k => k.json()) as any;
+                agent,
+            }).then((k) => k.json())) as any
             if (response.status.toUpperCase() == TRANS_STATUS.SUCCESSFUL) {
                 let data = {
                     status: TRANS_STATUS.PENDING,
                     url: response.data.link,
                     gateway_ref: gatewayRef,
                     py_ref: pyRef,
-                };
-                return createResponse(STATUS_CODES.OK, data);
-            }
-            else {
+                }
+                return createResponse(STATUS_CODES.OK, data)
+            } else {
                 /*add the transaction IDs to the response*/
-                response.gateway_ref = gatewayRef;
-                response.py_ref = pyRef;
-                return createResponse(STATUS_CODES.BAD_REQUEST, response);
+                response.gateway_ref = gatewayRef
+                response.py_ref = pyRef
+                return createResponse(STATUS_CODES.BAD_REQUEST, response)
             }
-
-        }
-        catch (error) {
-            await insertMessageLog(req, LOG_LEVELS.DEBUG, error.message);
-            return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
-                gateway_ref: gatewayRef,
-                py_ref: pyRef
-            }, error.message);
+        } catch (error) {
+            await insertMessageLog(req, LOG_LEVELS.DEBUG, error.message)
+            return createResponse(
+                STATUS_CODES.INTERNAL_SERVER_ERROR,
+                {
+                    gateway_ref: gatewayRef,
+                    py_ref: pyRef,
+                },
+                error.message,
+            )
         }
     }
 
@@ -163,25 +177,32 @@ export default class Card extends Service {
      * @throws - Throws an error if the update operation fails.
      */
     async updateLogByWebhook(req: any, res: any): Promise<IResponse> {
-        let status = req.details.status == 'successful' ? TRANS_STATUS.SUCCESSFUL : TRANS_STATUS.FAILED;
+        let status =
+            req.details.status == 'successful'
+                ? TRANS_STATUS.SUCCESSFUL
+                : TRANS_STATUS.FAILED
 
         try {
-            let collection = db.get().collection(process.env.DB_TRANSACTIONS_COLLECTION);
-            await collection.updateOne({"gatewayRef": req.details.txRef}, {
-                $set: {
-                    status,
-                    responseBody: req.details,
-                    updatedAt: new Date()
-                }
-            });
+            let collection = db
+                .get()
+                .collection(process.env.DB_TRANSACTIONS_COLLECTION)
+            await collection.updateOne(
+                { gatewayRef: req.details.txRef },
+                {
+                    $set: {
+                        status,
+                        responseBody: req.details,
+                        updatedAt: new Date(),
+                    },
+                },
+            )
 
             // Respond with a success status if update is successful
-            return createResponse(STATUS_CODES.OK, {});
+            return createResponse(STATUS_CODES.OK, {})
         } catch (err) {
-            console.error(err.message);
+            console.error(err.message)
             // Respond with an error status if update fails
-            return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {});
+            return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {})
         }
     }
-
 }

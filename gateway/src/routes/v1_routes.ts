@@ -378,54 +378,68 @@ router.post(
      * @param {Object} res - Express response object.
      * @returns {void}
      */
-    router.get('/transaction/all', authenticateRequest, async function (req: any, res) {
-        // Parse query parameters or use default values
-        let size = parseInt(req.query.limit) || 30;   // Number of items to retrieve (default: 30)
-        let offset = parseInt(req.query.offset) || 0; // Offset for pagination (default: 0)
-        let search = req.query.search;                 // Search query (optional)
-        
-        // Get the MongoDB collection for transactions
-        let collection = db.get().collection(process.env.DB_TRANSACTIONS_COLLECTION);
-        
-        // Define the search criteria for filtering transactions
-        let whereSearch = {};
+    router.get(
+        '/transaction/all',
+        authenticateRequest,
+        async function (req: any, res) {
+            // Parse query parameters or use default values
+            let size = parseInt(req.query.limit) || 30 // Number of items to retrieve (default: 30)
+            let offset = parseInt(req.query.offset) || 0 // Offset for pagination (default: 0)
+            let search = req.query.search // Search query (optional)
 
-        if (search != '') {
-            // Create a regular expression pattern for case-insensitive search
-            let filter = new RegExp(search, 'i');
-            whereSearch = {
-                '$or': [
-                    {'requestBody.external_transaction_id': filter},
-                    {'requestBody.msisdn': filter},
-                    {'internalTransactionId': filter}
-                ]
-            };
-        }
+            // Get the MongoDB collection for transactions
+            let collection = db
+                .get()
+                .collection(process.env.DB_TRANSACTIONS_COLLECTION)
 
-        try {
-            // Retrieve transactions from the collection with optional filtering
-            let [documents, totalDocuments] = await findDocuments(collection, whereSearch, offset, size);
+            // Define the search criteria for filtering transactions
+            let whereSearch = {}
 
-            // Create a response object with transaction data
-            let response = createResponse(STATUS_CODES.OK, {
-                total_count: totalDocuments, // Total number of matching transactions
-                limit: size,                // Number of transactions per page
-                transactions: documents     // Array of transactions
-            });
-
-            // Send the response to the client
-            if (!res.headersSent) {
-                res.status(response.code).json(response);
+            if (search != '') {
+                // Create a regular expression pattern for case-insensitive search
+                let filter = new RegExp(search, 'i')
+                whereSearch = {
+                    $or: [
+                        { 'requestBody.external_transaction_id': filter },
+                        { 'requestBody.msisdn': filter },
+                        { internalTransactionId: filter },
+                    ],
+                }
             }
-        } catch (error) {
-            console.error(error.message);
-            // Handle the error and send an appropriate response to the client
-            let errorResponse = createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {
-                error: error.message
-            });
-            res.status(errorResponse.code).json(errorResponse);
-        }
-    }),
+
+            try {
+                // Retrieve transactions from the collection with optional filtering
+                let [documents, totalDocuments] = await findDocuments(
+                    collection,
+                    whereSearch,
+                    offset,
+                    size,
+                )
+
+                // Create a response object with transaction data
+                let response = createResponse(STATUS_CODES.OK, {
+                    total_count: totalDocuments, // Total number of matching transactions
+                    limit: size, // Number of transactions per page
+                    transactions: documents, // Array of transactions
+                })
+
+                // Send the response to the client
+                if (!res.headersSent) {
+                    res.status(response.code).json(response)
+                }
+            } catch (error) {
+                console.error(error.message)
+                // Handle the error and send an appropriate response to the client
+                let errorResponse = createResponse(
+                    STATUS_CODES.INTERNAL_SERVER_ERROR,
+                    {
+                        error: error.message,
+                    },
+                )
+                res.status(errorResponse.code).json(errorResponse)
+            }
+        },
+    ),
 
     /**
      * GET endpoint to retrieve message log data with optional filtering.
@@ -434,55 +448,71 @@ router.post(
      * @param {Object} res - Express response object.
      * @returns {void}
      */
-    router.get('/messages', authenticateRequest, async function (req: any, res) {
-        // Parse query parameters or use default values
-        let size = parseInt(req.query.limit) || 30;   // Number of items to retrieve (default: 30)
-        let offset = parseInt(req.query.offset) || 0; // Offset for pagination (default: 0)
-        let search = req.query.search;                 // Search query (optional)
-        
-        // Get the MongoDB collection for messages
-        let collection = db.get().collection(process.env.DB_MESSAGES_COLLECTION);
-        
-        // Define the search criteria for filtering messages
-        let whereSearch = {};
+    router.get(
+        '/messages',
+        authenticateRequest,
+        async function (req: any, res) {
+            // Parse query parameters or use default values
+            let size = parseInt(req.query.limit) || 30 // Number of items to retrieve (default: 30)
+            let offset = parseInt(req.query.offset) || 0 // Offset for pagination (default: 0)
+            let search = req.query.search // Search query (optional)
 
-        if (search != '') {
-            // Create a regular expression pattern for case-insensitive search
-            let filter = new RegExp(search, 'i');
-            whereSearch = {
-                '$or': [
-                    {'requestBody.external_transaction_id': filter},
-                    {'requestBody.msisdn': filter},
-                    {'internalTransactionId': filter}
-                ]
-            };
-        }
+            // Get the MongoDB collection for messages
+            let collection = db
+                .get()
+                .collection(process.env.DB_MESSAGES_COLLECTION)
 
-        // Retrieve messages from the collection with optional filtering
-        let result = await findDocuments(collection, whereSearch, offset, size);
+            // Define the search criteria for filtering messages
+            let whereSearch = {}
 
-        // Create a response object with message log data
-        let response = createResponse(STATUS_CODES.OK, {
-            total_count: result[1],     // Total number of matching messages
-            limit: size,               // Number of messages per page
-            messages: result[0]        // Array of messages
-        });
+            if (search != '') {
+                // Create a regular expression pattern for case-insensitive search
+                let filter = new RegExp(search, 'i')
+                whereSearch = {
+                    $or: [
+                        { 'requestBody.external_transaction_id': filter },
+                        { 'requestBody.msisdn': filter },
+                        { internalTransactionId: filter },
+                    ],
+                }
+            }
 
-        // Send the response to the client
-        if (!res.headersSent) {
-            res.status(response.code).json(response);
-        }
-    }),
+            // Retrieve messages from the collection with optional filtering
+            let result = await findDocuments(
+                collection,
+                whereSearch,
+                offset,
+                size,
+            )
 
-    router.post('/webhook', authenticateWebhook, getRequestDetails, async function (req: any, res: any, next) {
+            // Create a response object with message log data
+            let response = createResponse(STATUS_CODES.OK, {
+                total_count: result[1], // Total number of matching messages
+                limit: size, // Number of messages per page
+                messages: result[0], // Array of messages
+            })
 
-        let serviceProvider: Service = await getServiceProvider(req.query.provider)
+            // Send the response to the client
+            if (!res.headersSent) {
+                res.status(response.code).json(response)
+            }
+        },
+    ),
 
-        let response = await serviceProvider.updateLogByWebhook(req, res)
+    router.post(
+        '/webhook',
+        authenticateWebhook,
+        getRequestDetails,
+        async function (req: any, res: any, next) {
+            let serviceProvider: Service = await getServiceProvider(
+                req.query.provider,
+            )
 
-        res.status(response.code).end()
-    })
+            let response = await serviceProvider.updateLogByWebhook(req, res)
 
+            res.status(response.code).end()
+        },
+    ),
 )
 
 module.exports = router

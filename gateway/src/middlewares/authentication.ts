@@ -48,9 +48,7 @@ export async function authenticateRequest(req, res, next) {
 export async function authenticateWebhook(req, res, next) {
     let gatewayRef = req.gatewayRef
 
-    if (
-        req.get('webhook-key') !== process.env.APP_WEBHOOK_KEY
-    ) {
+    if (req.get('webhook-key') !== process.env.APP_WEBHOOK_KEY) {
         let response = createResponse(
             STATUS_CODES.UNAUTHORIZED,
             { transaction_id: gatewayRef },
