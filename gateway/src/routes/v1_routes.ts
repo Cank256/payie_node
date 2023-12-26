@@ -14,6 +14,7 @@ import {
     createResponse,
     findDocuments,
     findTransaction,
+    getServiceProvider,
     getServiceProviders,
     insertTransactionLog,
     updateTransactionLog,
@@ -475,9 +476,11 @@ router.post(
 
     router.post('/webhook', authenticateWebhook, getRequestDetails, async function (req: any, res: any, next) {
 
-        let serviceProvider: Service = req.query.provider
-    
-        await serviceProvider.updateLogByWebhook(req, res)
+        let serviceProvider: Service = await getServiceProvider(req.query.provider)
+
+        let response = await serviceProvider.updateLogByWebhook(req, res)
+
+        res.status(response.code).end()
     })
 
 )

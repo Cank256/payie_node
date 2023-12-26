@@ -136,3 +136,5 @@ certs/*
 
 # Provider config
 *providers.json
+
+__MACOSX

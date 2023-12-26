@@ -19,8 +19,9 @@ let config = require('../config/providers')
  */
 export async function validateRequest(req, res, next) {
     let gatewayRef = req.gatewayRef
-    //validate external transaction id
     let pyRef = req.body.py_ref || req.query.py_ref
+    let theProvider = req.get('provider') || req.query.provider
+
     if (!pyRef) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
@@ -57,7 +58,7 @@ export async function validateRequest(req, res, next) {
     }
 
     //validate service provider
-    if (!req.get('service-provider')) {
+    if (!theProvider) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
             {
@@ -75,7 +76,7 @@ export async function validateRequest(req, res, next) {
         return res.status(response.code).json(response)
     }
 
-    if (!config.get(`service_providers:${req.get('service-provider')}`)) {
+    if (!config.get(`service_providers:${theProvider}`)) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
             {
@@ -93,7 +94,7 @@ export async function validateRequest(req, res, next) {
         return res.status(response.code).json(response)
     }
     //Add service provider to request
-    req.serviceProvider = await getServiceProvider(req.get('service-provider'))
+    req.serviceProvider = await getServiceProvider(theProvider)
 
     //call next middleware
     next()

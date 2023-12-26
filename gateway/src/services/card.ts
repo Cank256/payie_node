@@ -91,10 +91,10 @@ export default class Card extends Service {
         }
 
         /*set up the request parameters*/
-        let orderId = generateCode();
+        // let orderId = generateCode();
 
         let parameters = {
-            tx_ref: orderId,
+            tx_ref: gatewayRef,
             amount,
             currency,
             redirect_url: details.redirect_url,
@@ -105,9 +105,9 @@ export default class Card extends Service {
                 phonenumber: details.msisdn
             },
             customizations:{
-               title: "CankPay",
-               description: "Your Swift Payments",
-               logo: "https://ugmart.ug/wp-content/uploads/2020/06/cropped-ug-mart-1.png"
+                title: "CankPay",
+                description: "Your Swift Payments",
+                logo: ""
             }
         }
 
@@ -127,7 +127,7 @@ export default class Card extends Service {
             if (response.status.toUpperCase() == TRANS_STATUS.SUCCESSFUL) {
                 let data = {
                     status: TRANS_STATUS.PENDING,
-                    orderId: orderId,
+                    // orderId: orderId,
                     url: response.data.link,
                     gateway_ref: gatewayRef,
                     py_ref: pyRef,
@@ -168,7 +168,7 @@ export default class Card extends Service {
 
         try {
             let collection = db.get().collection(process.env.DB_TRANSACTIONS_COLLECTION);
-            await collection.updateOne({"responseBody.data.orderId": req.details.txRef}, {
+            await collection.updateOne({"gatewayRef": req.details.txRef}, {
                 $set: {
                     status,
                     responseBody: req.details,
@@ -177,11 +177,11 @@ export default class Card extends Service {
             });
 
             // Respond with a success status if update is successful
-            return Promise.resolve(createResponse(STATUS_CODES.OK, {}));
+            return createResponse(STATUS_CODES.OK, {});
         } catch (err) {
             console.error(err.message);
             // Respond with an error status if update fails
-            return Promise.reject(createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {}));
+            return createResponse(STATUS_CODES.INTERNAL_SERVER_ERROR, {});
         }
     }
 
