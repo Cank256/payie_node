@@ -64,7 +64,6 @@ router.get('/', (req: any, res, next) => {
 router.get(
     '/providers',
     authenticateRequest,
-    validateRequest,
     getRequestDetails,
     async (req, res, next) => {
         try {
