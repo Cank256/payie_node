@@ -2,11 +2,13 @@
 
 Welcome to the Payie Project, a payment solution developed using NodeJS.
 
+To get more details about the teachnologies and how to start explorer the sub applications in this projects (i.e. gateway, api and frontend), you can check out the README in each of the folders.
+
 ## Contributing
 
 Contributions are always welcome!
 
-See `contributing.md` for ways to get started.
+See `contributing.md` file in each of the application folders for ways to get started.
 
 Please adhere to this project's `code of conduct`.
 
