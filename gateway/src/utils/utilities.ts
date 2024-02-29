@@ -382,7 +382,7 @@ export async function findDocuments(
 ): Promise<any> {
     try {
         // Count the total number of documents that match the search criteria
-        let getDocsCount = await collection.find(whereSearch).count()
+        let getDocsCount = await collection.countDocuments(whereSearch)
 
         // Retrieve documents based on the search criteria, sorting by '_id' in descending order
         // Skip a certain number of documents for pagination and limit the number of retrieved documents
