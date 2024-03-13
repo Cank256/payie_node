@@ -1,6 +1,6 @@
 # Payie Project using NodeJS
 
-Welcome to the Payie Project, a payment solution developed using NodeJS.
+Welcome to the Payie Project, a payment solution developed using NodeJS (Gateway and API) and VueJS (for Dashboard UI).
 
 To get more details about the teachnologies and how to start explorer the sub applications in this projects (i.e. gateway, api and frontend), you can check out the README in each of the folders.
 
@@ -20,7 +20,6 @@ Please adhere to this project's `code of conduct`.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). See the [LICENSE](LICENSE) file in the root folder for more details.
+This project is licensed under the [MIT License](LICENSE).
 
 Feel free to explore the codebase, contribute, and make Payie even better!
-
