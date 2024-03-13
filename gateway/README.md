@@ -1,6 +1,7 @@
 # Payie NodeJS Gateway
 
-Gateway for the Payie payments project. This nhandles the basic interaction between payie and third party payment service providers (i.e. Airtel UG, Flutterwave and MTN UG).
+Gateway for the Payie payments project. This nhandles the basic interaction between payie and 
+third party payment service providers (i.e. Airtel UG, Flutterwave and MTN UG).
 
 ## Tech Used
 - NodeJS version 18.17.0 or higher
@@ -12,7 +13,8 @@ Gateway for the Payie payments project. This nhandles the basic interaction betw
 - Version Control: Git
 
 ## Local Development Setup
-To set up payie gateway on your local machine make sure you have the above tech specs installed, the follow these steps:
+To set up payie gateway on your local machine make sure you have the above tech specs installed,
+then follow these steps:
 
 1. Clone the repository:
    ```

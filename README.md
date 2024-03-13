@@ -1,8 +1,11 @@
 # Payie Project using NodeJS
 
-Welcome to the Payie Project, a payment solution developed using NodeJS (Gateway and API) and VueJS (for Dashboard UI).
+Welcome to the Payie Project, a payment solution developed using NodeJS (Gateway and API)
+and VueJS (for Dashboard UI).
 
-To get more details about the teachnologies and how to start explorer the sub applications in this projects (i.e. gateway, api and frontend), you can check out the README in each of the folders.
+To get more details about the teachnologies and how to start explorer the sub applications
+in this projects (i.e. gateway, api and frontend), you can check out the README in each
+of the folders.
 
 ## Contributing
 
