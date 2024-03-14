@@ -11,7 +11,6 @@
 import { Service } from './service'
 import {
     createResponse,
-    generateCode,
     IConfig,
     insertMessageLog,
     IResponse,
@@ -104,9 +103,6 @@ export default class Card extends Service {
             )
         }
 
-        /*set up the request parameters*/
-        // let orderId = generateCode();
-
         let parameters = {
             tx_ref: gatewayRef,
             amount,
@@ -128,7 +124,7 @@ export default class Card extends Service {
         let requestUrl = Card.stripTrailingSlash(this.serverUrl)
 
         try {
-            let response = (await fetch(requestUrl, {
+            let response = await fetch(requestUrl, {
                 method: 'POST',
                 body: JSON.stringify(parameters),
                 headers: {
@@ -136,7 +132,7 @@ export default class Card extends Service {
                     Authorization: 'Bearer ' + this.secret_key,
                 },
                 agent,
-            }).then((k) => k.json())) as any
+            }).then((k) => k.json())
             if (response.status.toUpperCase() == TRANS_STATUS.SUCCESSFUL) {
                 let data = {
                     status: TRANS_STATUS.PENDING,

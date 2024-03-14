@@ -24,7 +24,6 @@ import {
     insertMessageLog,
 } from '../utils/utilities'
 import { Service } from './service'
-import { clearInterval, setInterval } from 'timers'
 
 const { v4: uuidv4 } = require('uuid')
 const fetch = require('cross-fetch')
@@ -100,7 +99,7 @@ export default class MtnMomo extends Service {
 
         try {
             let parameters = {}
-            let response = (await fetch(requestUrl, {
+            let response = await fetch(requestUrl, {
                 method: 'POST',
                 body: JSON.stringify(parameters),
                 headers: {
@@ -114,20 +113,20 @@ export default class MtnMomo extends Service {
                     'Ocp-Apim-Subscription-Key': subscriptionKey,
                 },
                 agent,
-            }).then((k) => k.json())) as any
+            }).then((k) => k.json());
 
             if (
                 response.access_token &&
                 response.token_type &&
                 response.expires_in
             ) {
-                return createResponse(STATUS_CODES.OK, response)
+                return createResponse(STATUS_CODES.OK, response);
             } else {
                 return createResponse(
                     STATUS_CODES.UNPROCESSABLE_ENTITY,
                     response,
                     'Access Token Details not found',
-                )
+                );
             }
         } catch (error) {
             return createResponse(
@@ -168,7 +167,7 @@ export default class MtnMomo extends Service {
         )
 
         try {
-            let response = (await fetch(requestUrl, {
+            let response = await fetch(requestUrl, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -177,7 +176,7 @@ export default class MtnMomo extends Service {
                     'Ocp-Apim-Subscription-Key': this.collectionSubscriptionKey,
                 },
                 agent,
-            }).then((k) => k.json())) as any
+            }).then((k) => k.json())
 
             if (response.name) {
                 let response_data = {
