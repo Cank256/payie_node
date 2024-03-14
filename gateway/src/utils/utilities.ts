@@ -93,7 +93,7 @@ export function createResponse(
 ): IResponse {
     return {
         code,
-        success: code < 300 ? true : false,
+        success: code < 300,
         message: getStatusCodeMessage(code, extraInfo),
         data,
     }
