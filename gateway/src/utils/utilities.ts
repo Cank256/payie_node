@@ -178,6 +178,19 @@ export function generateCode(): string {
     return code.toString()
 }
 
+export function handleMissingParameters(details: any, params: string[], callback: Function, gatewayRef: string, pyRef: string) {
+    for (const param of params) {
+        if (!details[param]) {
+            // If the parameter is missing, return a callback with the appropriate error message.
+            return callback(createResponse(
+                STATUS_CODES.BAD_REQUEST,
+                { gateway_ref: gatewayRef, py_ref: pyRef },
+                `Missing ${param}.`
+            ));
+        }
+    }
+} 
+
 /**
  * Inserts a transaction log into the database.
  * @function

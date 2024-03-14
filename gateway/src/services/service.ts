@@ -72,9 +72,10 @@ export abstract class Service {
      * @function
      * @name validateAccount
      * @param {Object} req - The request object.
+     * @param {function} [callback] - Callback function for asynchronous handling.
      * @returns {Promise<Object>} - A promise resolving to a standardized API response object.
      */
-    async validateAccount(req: any): Promise<IResponse> {
+    async validateAccount(req: any, callback?: any): Promise<IResponse> {
         // Return a standardized response indicating a bad request
         return createResponse(STATUS_CODES.BAD_REQUEST)
     }

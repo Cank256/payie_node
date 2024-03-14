@@ -22,6 +22,7 @@ import {
     createResponse,
     IConfig,
     insertMessageLog,
+    handleMissingParameters
 } from '../utils/utilities'
 import { Service } from './service'
 
@@ -141,21 +142,16 @@ export default class MtnMomo extends Service {
      * Validate an account using MTN Mobile Money API.
      * @async
      * @param {Object} req - The request object.
+     * @param {function} callback - The callback function to handle the response.
      * @returns {Promise<IResponse>} - API response indicating the account validation status.
      */
-    async validateAccount(req: any): Promise<IResponse> {
+    async validateAccount(req: any, callback:any): Promise<IResponse> {
         let gatewayRef = req.gatewayRef
         let details = req.details
         let msisdn = details.msisdn
         let pyRef = details.pyRef
 
-        if (!msisdn) {
-            return createResponse(STATUS_CODES.BAD_REQUEST, {
-                error: 'msisdn missing',
-                gateway_ref: gatewayRef,
-                py_ref: pyRef,
-            })
-        }
+        handleMissingParameters(details, ['msisdn'], callback, gatewayRef, pyRef);
 
         let requestUrl =
             MtnMomo.stripTrailingSlash(this.collectionUrl) +
@@ -210,41 +206,17 @@ export default class MtnMomo extends Service {
      * @param {function} callback - The callback function to handle the response.
      * @returns {Promise<IResponse>} - A promise that resolves to the transaction response.
      */
-    async collect(req: any, callback): Promise<IResponse> {
+    async collect(req: any, callback: any): Promise<IResponse> {
         // Extract transaction details from the request.
         let gatewayRef = req.gatewayRef
         let details = req.details
-        let msisdn = details.msisdn
-        let amount = Number.parseInt(details.amount)
         let pyRef = details.pyRef
         let currency = details.currency || 'UGX'
 
-        // Validate required parameters.
-        if (!msisdn) {
-            return callback(
-                createResponse(
-                    STATUS_CODES.BAD_REQUEST,
-                    {
-                        gateway_ref: gatewayRef,
-                        py_ref: pyRef,
-                    },
-                    'Missing msisdn.',
-                ),
-            )
-        }
+        handleMissingParameters(details, ['msisdn', 'amount'], callback, gatewayRef, pyRef);
 
-        if (!amount) {
-            return callback(
-                createResponse(
-                    STATUS_CODES.BAD_REQUEST,
-                    {
-                        gateway_ref: gatewayRef,
-                        py_ref: pyRef,
-                    },
-                    'Missing amount.',
-                ),
-            )
-        }
+        let msisdn = details.msisdn
+        let amount = Number.parseInt(details.amount)
 
         // Set default description if not provided.
         let description = details.description || 'Payie Collection'
@@ -284,23 +256,7 @@ export default class MtnMomo extends Service {
                     .collection(process.env.DB_MOMO_IPS_COLLECTION)
 
                 // Insert a record for the initiated transaction in the database.
-                await collection.insertOne({
-                    reference: gatewayRef,
-                    py_ref: pyRef,
-                    msisdn,
-                    amount,
-                    status: TRANS_STATUS.PENDING,
-                    type: TRANS_TYPES.COLLECTION,
-                    x_reference_id: referenceId,
-                    provider_transaction_id: null,
-                    message: 'Transaction Initiated',
-                    created_at: new Date(),
-                    callback_received: false,
-                    completed_by: null,
-                    completed_at: null,
-                    callback_time: null,
-                    meta: {},
-                })
+                await this.insertTransactionRecord(collection, gatewayRef, pyRef, details, referenceId);
 
                 // Perform the collection request using the configured service provider.
                 await fetch(requestUrl, {
@@ -430,42 +386,18 @@ export default class MtnMomo extends Service {
      * @param {Function} callback - A callback function to handle the response.
      * @returns {Promise<IResponse>} A promise that resolves to a response object.
      */
-    async transfer(req: any, callback): Promise<IResponse> {
+    async transfer(req: any, callback: any): Promise<IResponse> {
         let gatewayRef = req.gatewayRef
 
         let details = req.details
-        let msisdn = details.msisdn
-        let amount = details.amount
         let currency = details.currency || 'UGX'
         let pyRef = details.pyRef
-
         let description = details.description || 'CankPay Transfers.'
 
-        if (!msisdn) {
-            return callback(
-                createResponse(
-                    STATUS_CODES.BAD_REQUEST,
-                    {
-                        gateway_ref: gatewayRef,
-                        py_ref: pyRef,
-                    },
-                    'missing msisdn.',
-                ),
-            )
-        }
+        handleMissingParameters(details, ['msisdn', 'amount'], callback, gatewayRef, pyRef);
 
-        if (!amount) {
-            return callback(
-                createResponse(
-                    STATUS_CODES.BAD_REQUEST,
-                    {
-                        gateway_ref: gatewayRef,
-                        py_ref: pyRef,
-                    },
-                    'missing amount.',
-                ),
-            )
-        }
+        let msisdn = details.msisdn
+        let amount = details.amount
 
         let parameters = {
             amount: amount.toString(),
@@ -491,23 +423,7 @@ export default class MtnMomo extends Service {
                 let collection = db
                     .get()
                     .collection(process.env.DB_MOMO_IPS_COLLECTION)
-                await collection.insertOne({
-                    reference: gatewayRef,
-                    py_ref: pyRef,
-                    msisdn,
-                    amount,
-                    status: TRANS_STATUS.PENDING,
-                    type: TRANS_TYPES.PAYOUT,
-                    x_reference_id: referenceId,
-                    provider_transaction_id: null,
-                    message: 'Transaction Initiated',
-                    created_at: new Date(),
-                    callback_received: false,
-                    completed_by: null,
-                    completed_at: null,
-                    callback_time: null,
-                    meta: {},
-                })
+                    await this.insertTransactionRecord(collection, gatewayRef, pyRef, details, referenceId);
 
                 await fetch(requestUrl, {
                     method: 'POST',
@@ -896,5 +812,25 @@ export default class MtnMomo extends Service {
         } else {
             return accessTokenRequest
         }
+    }
+
+    async insertTransactionRecord(collection: any, gatewayRef: string, pyRef: string, details: any, referenceId: string) {
+        await collection.insertOne({
+            reference: gatewayRef,
+            py_ref: pyRef,
+            msisdn: details.msisdn,
+            amount: Number.parseInt(details.amount),
+            status: TRANS_STATUS.PENDING,
+            type: TRANS_TYPES.COLLECTION,
+            x_reference_id: referenceId,
+            provider_transaction_id: null,
+            message: 'Transaction Initiated',
+            created_at: new Date(),
+            callback_received: false,
+            completed_by: null,
+            completed_at: null,
+            callback_time: null,
+            meta: {},
+        });
     }
 }
