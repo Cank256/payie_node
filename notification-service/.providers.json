@@ -1,0 +1,14 @@
+{
+  "service_providers": {
+    "sms": {
+      "auth_url": "https://auth.sms.to/oauth/token",
+      "balance_url": "https://auth.sms.to/api/balance",
+      "validate_url": "https://sms.to/v1/verify/number",
+      "type": "Vendor",
+      "name": "SMS",
+      "code": "sms",
+      "client_id": "YCmEstHEjmSB7gEy",
+      "secret_key": "9ZPe1aiixZ6xn0qINVhh81LtTG2vCrVq" 
+    }
+  }
+}

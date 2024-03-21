@@ -9,7 +9,7 @@ third party payment service providers (i.e. Airtel UG, Flutterwave and MTN UG).
 - Database: MongoDB
 - Caching: REDIS
 - External API: Momo API UG, Airtel Money, Flutterwave Card payment
-- Testing: Jest for Vue.js, Unit Testing for Flask
+- Testing: Jest for NodeJS
 - Version Control: Git
 
 ## Local Development Setup

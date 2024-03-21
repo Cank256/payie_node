@@ -1,0 +1,15 @@
+{
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 4,
+    "printWidth": 80,
+    "endOfLine": "auto",
+    "overrides": [
+        {
+            "files": ["*.ts", "*.tsx"],
+            "options": {
+            "parser": "typescript"
+            }
+        }
+    ]
+}
