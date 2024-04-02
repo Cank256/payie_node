@@ -46,7 +46,13 @@ export interface IResponse {
  * @property {string} [api_key] - API key for authentication with the service provider.
  * @property {string} [api_user] - API user for authentication with the service provider.
  * @property {string[]} [allowed_callback_ips] - List of allowed callback IP addresses for the service provider.
- * @property {string} [provider_callback_url] - Callback URL for the service provider.
+ * @property {string} [encryption] - Encryption protocol for the service provider.
+ * @property {string} [user_name] - Username for authentication with the service provider.
+ * @property {string} [password] - Password for authentication with the service provider.
+ * @property {string} [mailer] - Callback URL for the service provider.
+ * @property {string} [host] - Host URL for the service provider.
+ * @property {string} [port] - Port for the service provider.
+ * @property {string} [secure] - Security option for the service provider.
  */
 export interface IConfig {
     name?: string
@@ -66,6 +72,13 @@ export interface IConfig {
     provider_env?: string
     allowed_callback_ips?: string[]
     provider_callback_url?: string
+    encryption: String
+    user_name: String
+    password: String
+    mailer: String
+    host:String
+    port: String
+    secure: String
 }
 
 /**

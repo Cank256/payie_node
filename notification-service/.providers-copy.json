@@ -9,6 +9,18 @@
       "code": "sms",
       "client_id": "",
       "secret_key": "" 
+    },
+    "emai": {
+      "name": "Email",
+      "code": "email",
+      "type": "Vendor",
+      "port": 587,
+      "mailer": "SMTP",
+      "host": "smtp.gmail.com",
+      "secure": false,
+      "encryption": "TLS",
+      "user_name": "",
+      "password": ""
     }
   }
 }
