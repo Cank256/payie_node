@@ -19,18 +19,15 @@ export abstract class Service {
     protected code: string
     protected type: string[]
     protected msisdn: string
-    protected clientId: string
-    protected serverUrl: string
+    protected client_id: string
     protected secret_key: string
-    protected apiKey: string
-    protected apiUser: string
-    protected secretKey: string
-    protected providerEnv: string
-    protected parameters: string[]
-    protected allowedCallbackIPs: string[]
-    protected providerCallbackUrl: string
-    protected collectionSubscriptionKey: string
-    protected requestCallback: boolean = false
+    protected hostUrl: string
+    protected port: number
+    protected mailer: string
+    protected secure: boolean = false
+    protected encryption: string
+    protected user_name: string
+    protected password: string
 
     /**
      * Gets the name of the service provider.
@@ -155,15 +152,5 @@ export abstract class Service {
      */
     async updateLogByWebhook(req: any, res: any): Promise<IResponse> {
         return createResponse(STATUS_CODES.BAD_REQUEST)
-    }
-
-    /**
-     * Checks if the service provider supports notification callback.
-     * @function
-     * @name requestWithCallback
-     * @returns {boolean} - Indicates whether the service provider supports notification callback.
-     */
-    requestWithCallback() {
-        return this.requestCallback
     }
 }
