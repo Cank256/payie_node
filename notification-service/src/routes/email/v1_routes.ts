@@ -40,4 +40,12 @@ router.get('/', (req: any, res, next) => {
     })
 })
 
+router.post('/send', (req: any, res, next) => {
+    res.json({
+        code: STATUS_CODES.OK,
+        success: true,
+        message: 'Send Email Notification',
+    })
+})
+
 module.exports = router
