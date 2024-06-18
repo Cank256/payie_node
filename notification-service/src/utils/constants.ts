@@ -71,7 +71,7 @@ export const SMS_CODES = {
  * @name TRANS_STATUS
  * @memberof module:constants
  */
-export const TRANS_STATUS = {
+export const NOTIFICATION_STATUS = {
     CANCELLED: 'CANCELLED',
     COMPLETED: 'COMPLETED',
     FAILED: 'FAILED',
