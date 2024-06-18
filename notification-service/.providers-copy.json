@@ -10,7 +10,7 @@
       "client_id": "",
       "secret_key": "" 
     },
-    "emai": {
+    "email": {
       "name": "Email",
       "code": "email",
       "type": "Vendor",
