@@ -167,7 +167,7 @@ export function getServiceProviders(): IResponse {
  */
 export async function getServiceProvider(code: string): Promise<any> {
     let providerConfig = config.get(`service_providers:${code}`)
-    let serviceProvider = await import(`../services/${dasherize(code)}`)
+    let serviceProvider = await import(`../services/${dasherize(code)}Service`)
     return new serviceProvider.default(providerConfig)
 }
 
