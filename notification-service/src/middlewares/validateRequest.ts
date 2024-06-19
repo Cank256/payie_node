@@ -26,7 +26,7 @@ export async function validateRequest(req, res, next) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
             {
-                gateway_ref: serviceRef,
+                service_ref: serviceRef,
             },
             ERROR_MESSAGES.MISSING_API_REF,
         )
@@ -43,7 +43,7 @@ export async function validateRequest(req, res, next) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
             {
-                gateway_ref: serviceRef,
+                service_ref: serviceRef,
                 nt_ref: ntRef,
             },
             ERROR_MESSAGES.NON_UNIQUE_REQUEST,
@@ -62,7 +62,7 @@ export async function validateRequest(req, res, next) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
             {
-                gateway_ref: serviceRef,
+                service_ref: serviceRef,
                 nt_ref: ntRef,
             },
             ERROR_MESSAGES.MISSING_PROVIDER_HEADER,
@@ -80,7 +80,7 @@ export async function validateRequest(req, res, next) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
             {
-                gateway_ref: serviceRef,
+                service_ref: serviceRef,
                 nt_ref: ntRef,
             },
             ERROR_MESSAGES.UNKNOWN_SERVICE_PROVIDER,
