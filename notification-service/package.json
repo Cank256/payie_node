@@ -31,6 +31,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "axios": "^1.7.2",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.6",
     "cross-fetch": "^4.0.0",
@@ -41,9 +42,11 @@
     "mongodb": "^6.3.0",
     "morgan": "^1.10.0",
     "nconf": "^0.12.1",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.13",
     "path": "^0.12.7",
     "pm2": "^5.3.0",
+    "querystring": "^0.2.1",
     "redis": "^4.6.11",
     "rimraf": "^5.0.5",
     "timers": "^0.1.1",

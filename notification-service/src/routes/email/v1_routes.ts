@@ -1,5 +1,5 @@
 /**
- * @fileOverview Routes for the Payie Gateway API version 1 Routes.
+ * @fileOverview Routes for the Payie Notification API version 1 Email Routes.
  * @module routes/email/v1_routes
  */
 

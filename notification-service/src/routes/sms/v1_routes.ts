@@ -1,5 +1,5 @@
 /**
- * @fileOverview Routes for the Payie Gateway API version 1 Routes.
+ * @fileOverview Routes for the Payie Notification API version 1 SMS Routes.
  * @module routes/sms/v1_routes
  */
 
@@ -10,15 +10,11 @@ let router = express.Router()
 
 import { LOG_LEVELS, STATUS_CODES } from '../../utils/constants'
 import {
-    createResponse,
-    findDocuments,
-    findNotification,
-    getServiceProvider,
-    getServiceProviders,
     insertNotificationLog,
     updateNotificationLog,
 } from '../../utils/utilities'
-const db = require('../../config/db')
+import { Service } from '../../services/service'
+import { getRequestDetails, validateRequest } from '../../middlewares'
 
 /**
  * Redis Cache key prefix for API routes.
@@ -40,12 +36,21 @@ router.get('/', (req: any, res, next) => {
     })
 })
 
-router.post('/send', (req: any, res, next) => {
-    res.json({
-        code: STATUS_CODES.OK,
-        success: true,
-        message: 'Send SMS Notification',
-    })
-})
+router.post(
+    '/send',
+    validateRequest,
+    getRequestDetails,
+    async function (req: any, res, next) {
+        let serviceProvider: Service = req.serviceProvider
+        await insertNotificationLog(req, LOG_LEVELS.INFO)
+
+        let response = await serviceProvider.sendSms(req)
+        await updateNotificationLog(req, response)
+
+        if (!res.headersSent) {
+            res.status(response.code).json(response)
+        }
+    },
+)
 
 module.exports = router
