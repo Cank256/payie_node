@@ -134,3 +134,4 @@ dist
 __MACOSX
 
 .providers.json
+yarn.lock
