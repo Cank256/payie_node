@@ -20,7 +20,7 @@ let config = require('../config/providers')
 export async function validateRequest(req, res, next) {
     let serviceRef = req.serviceRef
     let ntRef = req.body.nt_ref || req.query.nt_ref
-    let theProvider = req.get('provider') || req.query.provider
+    let theService = req.get('service')
 
     if (!ntRef) {
         let response = createResponse(
@@ -58,7 +58,7 @@ export async function validateRequest(req, res, next) {
     }
 
     //validate service provider
-    if (!theProvider) {
+    if (!theService) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
             {
@@ -76,7 +76,7 @@ export async function validateRequest(req, res, next) {
         return res.status(response.code).json(response)
     }
 
-    if (!config.get(`service_providers:${theProvider}`)) {
+    if (!config.get(`service_providers:${theService}`)) {
         let response = createResponse(
             STATUS_CODES.BAD_REQUEST,
             {
@@ -94,7 +94,7 @@ export async function validateRequest(req, res, next) {
         return res.status(response.code).json(response)
     }
     //Add service provider to request
-    req.serviceProvider = await getServiceProvider(theProvider)
+    req.serviceProvider = await getServiceProvider(theService)
 
     //call next middleware
     next()
