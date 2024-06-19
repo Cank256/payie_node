@@ -76,19 +76,6 @@ export abstract class Service {
     }
 
     /**
-     * Initiates a collection request with the service provider.
-     * @async
-     * @function
-     * @name collect
-     * @param {any} details - Details of the collection request.
-     * @param {function} [callback] - Callback function for asynchronous handling.
-     * @returns {Promise<IResponse>} - Standardized API response object.
-     */
-    async collect(details: any, callback?: any): Promise<IResponse> {
-        return createResponse(STATUS_CODES.BAD_REQUEST)
-    }
-
-    /**
      * Handles notification callback from the service provider.
      * @async
      * @function
@@ -109,6 +96,18 @@ export abstract class Service {
      * @returns {Promise<IResponse>} - Standardized API response object.
      */
     async sendSms(details: any): Promise<IResponse> {
+        return createResponse(STATUS_CODES.BAD_REQUEST)
+    }
+
+    /**
+     * Sends an Email using the chosen service provider's Email service.
+     * @async
+     * @function
+     * @name sendEmail
+     * @param {any} details - Details of the Email request.
+     * @returns {Promise<IResponse>} - Standardized API response object.
+     */
+    async sendEmail(details: any): Promise<IResponse> {
         return createResponse(STATUS_CODES.BAD_REQUEST)
     }
 
@@ -138,19 +137,6 @@ export abstract class Service {
         details: any,
         callback?: any,
     ): Promise<IResponse> {
-        return createResponse(STATUS_CODES.BAD_REQUEST)
-    }
-
-    /**
-     * Update the notification log with a Service Provider Webhook.
-     * @async
-     * @function
-     * @name updateLogByWebhook
-     * @param {any} req - Details of the webhook request.
-     * @param {any} res - Response to return.
-     * @returns {Promise<IResponse>} - Standardized API response object.
-     */
-    async updateLogByWebhook(req: any, res: any): Promise<IResponse> {
         return createResponse(STATUS_CODES.BAD_REQUEST)
     }
 }

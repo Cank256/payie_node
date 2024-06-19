@@ -19,7 +19,7 @@ module.exports = function (app) {
      */
     app.use('/email/v1', emailV1Routes)
     app.use('/sms/v1', smsV1Routes)
-    app.get('/favicon.ico', function(req, res) { 
-        res.sendStatus(204); 
-    });
+    app.get('/favicon.ico', function (req, res) {
+        res.sendStatus(204)
+    })
 }

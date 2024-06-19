@@ -72,13 +72,13 @@ export interface IConfig {
     provider_env?: string
     allowed_callback_ips?: string[]
     provider_callback_url?: string
-    encryption: String
-    user_name: String
-    password: String
-    mailer: String
-    host:String
-    port: String
-    secure: String
+    encryption: string
+    user_name: string
+    password: string
+    mailer: string
+    host: string
+    port: string
+    secure: string
 }
 
 /**
@@ -183,18 +183,26 @@ export function generateCode(): string {
     return code.toString()
 }
 
-export function handleMissingParameters(details: any, params: string[], callback: Function, gatewayRef: string, pyRef: string) {
+export function handleMissingParameters(
+    details: any,
+    params: string[],
+    callback: Function,
+    gatewayRef: string,
+    pyRef: string,
+) {
     for (const param of params) {
         if (!details[param]) {
             // If the parameter is missing, return a callback with the appropriate error message.
-            return callback(createResponse(
-                STATUS_CODES.BAD_REQUEST,
-                { gateway_ref: gatewayRef, py_ref: pyRef },
-                `Missing ${param}.`
-            ));
+            return callback(
+                createResponse(
+                    STATUS_CODES.BAD_REQUEST,
+                    { gateway_ref: gatewayRef, py_ref: pyRef },
+                    `Missing ${param}.`,
+                ),
+            )
         }
     }
-} 
+}
 
 /**
  * Inserts a notification log into the database.

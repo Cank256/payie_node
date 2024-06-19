@@ -10,15 +10,10 @@ let router = express.Router()
 
 import { LOG_LEVELS, STATUS_CODES } from '../../utils/constants'
 import {
-    createResponse,
-    findDocuments,
-    findNotification,
-    getServiceProvider,
-    getServiceProviders,
     insertNotificationLog,
     updateNotificationLog,
 } from '../../utils/utilities'
-const db = require('../../config/db')
+import { Service } from '../../services/service'
 
 /**
  * Redis Cache key prefix for API routes.
@@ -40,12 +35,10 @@ router.get('/', (req: any, res, next) => {
     })
 })
 
-router.post('/send', (req: any, res, next) => {
-    res.json({
-        code: STATUS_CODES.OK,
-        success: true,
-        message: 'Send Email Notification',
-    })
+router.post('/send', async function (req: any, res, next) {
+    let serviceProvider: Service = req.get('service')
+    await insertNotificationLog(req, LOG_LEVELS.INFO)
+    console.log(serviceProvider)
 })
 
 module.exports = router
