@@ -14,10 +14,7 @@ import {
     updateNotificationLog,
 } from '../../utils/utilities'
 import { Service } from '../../services/service'
-import {
-    getRequestDetails,
-    validateRequest,
-} from '../../middlewares'
+import { getRequestDetails, validateRequest } from '../../middlewares'
 
 /**
  * Redis Cache key prefix for API routes.
@@ -39,16 +36,21 @@ router.get('/', (req: any, res, next) => {
     })
 })
 
-router.post('/send', validateRequest, getRequestDetails, async function (req: any, res, next) {
-    let serviceProvider: Service = req.serviceProvider
-    await insertNotificationLog(req, LOG_LEVELS.INFO)
+router.post(
+    '/send',
+    validateRequest,
+    getRequestDetails,
+    async function (req: any, res, next) {
+        let serviceProvider: Service = req.serviceProvider
+        await insertNotificationLog(req, LOG_LEVELS.INFO)
 
-    let response = await serviceProvider.sendEmail(req)
-    await updateNotificationLog(req, response)
+        let response = await serviceProvider.sendEmail(req)
+        await updateNotificationLog(req, response)
 
-    if (!res.headersSent) {
-        res.status(response.code).json(response)
-    }
-})
+        if (!res.headersSent) {
+            res.status(response.code).json(response)
+        }
+    },
+)
 
 module.exports = router

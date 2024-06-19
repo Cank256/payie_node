@@ -6,7 +6,6 @@
 
 require('dotenv').config()
 const dasherize = require('underscore.string/dasherize')
-const uniqid = require('uniqid')
 import { STATUS_CODES } from './constants'
 let config = require('../config/providers')
 const db = require('../config/db')
