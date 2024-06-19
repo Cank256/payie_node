@@ -44,8 +44,8 @@ export const LOG_LEVELS = {
  * @memberof module:constants
  */
 export const ERROR_MESSAGES = {
-    NON_UNIQUE_TRANSACTION: 'Please provide a unique py_ref.',
-    MISSING_API_REF: 'Missing api reference (py_ref).',
+    NON_UNIQUE_REQUEST: 'Please provide a unique nt_ref.',
+    MISSING_API_REF: 'Missing api reference (nt_ref).',
     MISSING_PROVIDER_HEADER: 'Missing provider header.',
     UNKNOWN_SERVICE_PROVIDER: 'Unknown service provider.',
     UNAUTHORIZED_ACCESS: 'Unauthorized API access.',
