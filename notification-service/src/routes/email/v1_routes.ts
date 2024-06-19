@@ -39,10 +39,16 @@ router.get('/', (req: any, res, next) => {
     })
 })
 
-router.post('/send', validateRequest, async function (req: any, res, next) {
+router.post('/send', validateRequest, getRequestDetails, async function (req: any, res, next) {
     let serviceProvider: Service = req.serviceProvider
-    console.log(serviceProvider)
-    // await insertNotificationLog(req, LOG_LEVELS.INFO)
+    await insertNotificationLog(req, LOG_LEVELS.INFO)
+
+    let response = await serviceProvider.sendEmail(req)
+    await updateNotificationLog(req, response)
+
+    if (!res.headersSent) {
+        res.status(response.code).json(response)
+    }
 })
 
 module.exports = router
