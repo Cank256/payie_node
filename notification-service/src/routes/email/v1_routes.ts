@@ -14,6 +14,10 @@ import {
     updateNotificationLog,
 } from '../../utils/utilities'
 import { Service } from '../../services/service'
+import {
+    getRequestDetails,
+    validateRequest,
+} from '../../middlewares'
 
 /**
  * Redis Cache key prefix for API routes.
@@ -35,10 +39,10 @@ router.get('/', (req: any, res, next) => {
     })
 })
 
-router.post('/send', async function (req: any, res, next) {
-    let serviceProvider: Service = req.get('service')
-    await insertNotificationLog(req, LOG_LEVELS.INFO)
+router.post('/send', validateRequest, async function (req: any, res, next) {
+    let serviceProvider: Service = req.serviceProvider
     console.log(serviceProvider)
+    // await insertNotificationLog(req, LOG_LEVELS.INFO)
 })
 
 module.exports = router

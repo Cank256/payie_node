@@ -230,7 +230,7 @@ export async function insertNotificationLog(
     try {
         let collection = db
             .get()
-            .collection(process.env.DB_notifications_COLLECTION)
+            .collection(process.env.DB_TRANSACTIONS_COLLECTION)
         return await collection.insertOne({
             ipAddress,
             gatewayRef,
@@ -300,7 +300,7 @@ export async function insertMessageLog(
 export async function notificationExists(pyRef: string) {
     let count = await db
         .get()
-        .collection(process.env.DB_notifications_COLLECTION)
+        .collection(process.env.DB_TRANSACTIONS_COLLECTION)
         .count({ 'requestBody.py_ref': pyRef })
     return count > 0
 }
@@ -319,7 +319,7 @@ export async function updateNotificationLog(req: any, response: IResponse) {
     try {
         let collection = db
             .get()
-            .collection(process.env.DB_NOTIFICATIONS_COLLECTION)
+            .collection(process.env.DB_TRANSACTIONS_COLLECTION)
         return await collection.updateOne(
             { gatewayRef: gatewayRef },
             {
@@ -351,7 +351,7 @@ export async function updateLogByExternalRef(
     try {
         let collection = db
             .get()
-            .collection(process.env.DB_NOTIFICATIONS_COLLECTION)
+            .collection(process.env.DB_TRANSACTIONS_COLLECTION)
         return await collection.updateOne(
             { 'requestBody.py_ref': pyRef },
             {
