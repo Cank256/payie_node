@@ -1,2 +1,2 @@
-export * from './requestprocessing'
+export * from './processRequest'
 export * from './validateRequest'
